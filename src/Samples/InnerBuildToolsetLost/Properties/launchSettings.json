@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "InnerBuildToolsetLost": {
+      "commandName": "Project",
+      "commandLineArgs": "\"C:\\Program Files (x86)\\Microsoft Visual Studio\\Preview\\Enterprise\\MSBuild\\\\15.0\\\\Bin\\\\\""
+    }
+  }
+}

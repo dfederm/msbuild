@@ -1,0 +1,10 @@
+<Project>
+  <Target Name="Build" DependsOnTargets="PrintMsBuildToolsPath;InnerBuild" />
+  <Target Name="PrintMsBuildToolsPath">
+    <Message Importance="High" Text="MsBuildToolsPath for $(MsBuildThisFile): $(MsBuildToolsPath)" />
+  </Target>
+  <Target Name="InnerBuild">
+    <MSBuild Projects="InnerProject.proj"
+             Targets="Build" />
+  </Target>
+</Project>

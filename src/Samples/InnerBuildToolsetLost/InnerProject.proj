@@ -1,0 +1,6 @@
+<Project>
+  <Target Name="Build" DependsOnTargets="PrintMsBuildToolsPath" />
+  <Target Name="PrintMsBuildToolsPath">
+    <Message Importance="High" Text="MsBuildToolsPath for $(MsBuildThisFile): $(MsBuildToolsPath)" />
+  </Target>
+</Project>
