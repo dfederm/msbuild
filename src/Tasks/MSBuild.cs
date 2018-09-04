@@ -9,6 +9,7 @@ using Microsoft.Build.Framework;
 using Microsoft.Build.Shared;
 using Microsoft.Build.Shared.FileSystem;
 using Microsoft.Build.Utilities;
+using System.Linq;
 
 namespace Microsoft.Build.Tasks
 {
@@ -595,6 +596,13 @@ namespace Microsoft.Build.Tasks
                     // continue with remaining targets.
                     break;
                 }
+
+                log.LogWarning($"MSBuild Static Graph: MSBuild Task invoked.\r\n" +
+                    $"Targets={string.Join(";", targetList ?? Array.Empty<string>())}\r\n" +
+                    $"Properties={string.Join(";", (propertiesTable ?? new Dictionary<string, string>()).Select(prop => prop.Key + "=" + prop.Value))}\r\n" +
+                    $"RemoveProperties={string.Join(";", undefineProperties ?? Array.Empty<string>())}\r\n" +
+                    $"Projects={string.Join(";", projectNames ?? Array.Empty<string>())}\r\n" +
+                    $"ToolsVersions={string.Join(";", toolsVersions ?? Array.Empty<string>())}\r\n");
 
                 // Send the project off to the build engine.  By passing in null to the 
                 // first param, we are indicating that the project to build is the same
