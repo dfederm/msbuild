@@ -14,6 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
@@ -2003,9 +2004,12 @@ namespace Microsoft.Build.Execution
             var waitHandle = new AutoResetEvent(true);
             var graphBuildStateLock = new object();
 
+            var msbuildExe = Assembly.GetEntryAssembly().Location;
+            Environment.SetEnvironmentVariable("MSBUILDDEBUGONSTART", null);
+
             var blockedNodes = new HashSet<ProjectGraphNode>(projectGraph.ProjectNodes);
             var finishedNodes = new HashSet<ProjectGraphNode>(projectGraph.ProjectNodes.Count);
-            var buildingNodes = new Dictionary<BuildSubmission, ProjectGraphNode>();
+            var buildingNodes = new HashSet<ProjectGraphNode>();
             var resultsPerNode = new Dictionary<ProjectGraphNode, BuildResult>(projectGraph.ProjectNodes.Count);
             ExceptionDispatchInfo submissionException = null;
 
@@ -2039,39 +2043,63 @@ namespace Microsoft.Build.Execution
                             continue;
                         }
 
-                        var request = new BuildRequestData(
-                            node.ProjectInstance,
-                            targetList.ToArray(),
-                            graphBuildRequestData.HostServices,
-                            graphBuildRequestData.Flags);
+                        var argumentsBuilder = new StringBuilder();
+                        argumentsBuilder.Append(node.ProjectInstance.FullPath);
+                        argumentsBuilder.Append($" -target:{string.Join(";", targetList)}");
+                        argumentsBuilder.Append($" -binaryLogger:{Path.Combine(node.ProjectInstance.Directory, "msbuild.binlog")}");
+                        argumentsBuilder.Append($" -outputResultsCache:{node.ProjectInstance.FullPath + ".MSBuildResultsCache"}");
 
-                        // TODO Tack onto the existing submission instead of pending a whole new submission for every node
-                        // Among other things, this makes BuildParameters.DetailedSummary produce a summary for each node, which is not desirable.
-                        // We basically want to submit all requests to the scheduler all at once and describe dependencies by requests being blocked by other requests.
-                        // However today the scheduler only keeps track of MSBuild nodes being blocked by other MSBuild nodes, and MSBuild nodes haven't been assigned to the graph nodes yet.
-                        var innerBuildSubmission = PendBuildRequest(request);
-                        buildingNodes.Add(innerBuildSubmission, node);
+                        // Don't pick up any extra params
+                        argumentsBuilder.Append($" -noautoresponse");
+
+                        foreach (KeyValuePair<string, string> prop in node.ProjectInstance.GlobalProperties)
+                        {
+                            argumentsBuilder.Append($" -p:{prop.Key}={prop.Value}");
+                        }
+
+                        if (node.ProjectReferences.Count > 0)
+                        {
+                            argumentsBuilder.Append($" -inputResultsCaches:{string.Join(";", node.ProjectReferences.Select(reference => reference.ProjectInstance.FullPath + ".MSBuildResultsCache"))}");
+                        }
+
+                        string arguments = argumentsBuilder.ToString();
+
+                        ((IBuildComponentHost)this).LoggingService.LogCommentFromText(BuildEventContext.Invalid, MessageImportance.High, $"Launching with arguments: {arguments}");
+
+                        var process = new Process
+                        {
+                            StartInfo = new ProcessStartInfo
+                            {
+                                FileName = msbuildExe,
+                                Arguments = arguments,
+                                WorkingDirectory = node.ProjectInstance.Directory,
+                                CreateNoWindow = true,
+                                UseShellExecute = false,
+                            },
+                            EnableRaisingEvents = true,
+                        };
+
+                        buildingNodes.Add(node);
                         blockedNodes.Remove(node);
-                        innerBuildSubmission.ExecuteAsync(finishedBuildSubmission =>
+                        process.Exited += ((sender, eventArgs) =>
                         {
                             lock (graphBuildStateLock)
                             {
-                                if (submissionException == null && finishedBuildSubmission.BuildResult.Exception != null)
+                                finishedNodes.Add(node);
+                                buildingNodes.Remove(node);
+
+                                var buildResult = new BuildResult();
+                                if (process.ExitCode != 0)
                                 {
-                                    // Preserve the original stack.
-                                    submissionException = ExceptionDispatchInfo.Capture(finishedBuildSubmission.BuildResult.Exception);
+                                    ((IBuildComponentHost)this).LoggingService.LogErrorFromText(BuildEventContext.Invalid, null, null, null, BuildEventFileInfo.Empty, $"Project failed: {node.ProjectInstance.FullPath}");
+                                    buildResult.SetOverallResult(overallResult: false);
                                 }
 
-                                ProjectGraphNode finishedNode = buildingNodes[finishedBuildSubmission];
-
-                                finishedNodes.Add(finishedNode);
-                                buildingNodes.Remove(finishedBuildSubmission);
-
-                                resultsPerNode.Add(finishedNode, finishedBuildSubmission.BuildResult);
+                                resultsPerNode.Add(node, buildResult);
                             }
 
                             waitHandle.Set();
-                        }, null);
+                        });
                     }
                 }
             }

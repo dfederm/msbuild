@@ -341,12 +341,15 @@ namespace Microsoft.Build.Execution
                     return BuildResultCode.Failure;
                 }
 
-                foreach (KeyValuePair<string, TargetResult> result in _resultsByTarget)
+                if (_resultsByTarget != null)
                 {
-                    if ((result.Value.ResultCode == TargetResultCode.Failure && !result.Value.TargetFailureDoesntCauseBuildFailure)
-                        || result.Value.AfterTargetsHaveFailed)
+                    foreach (KeyValuePair<string, TargetResult> result in _resultsByTarget)
                     {
-                        return BuildResultCode.Failure;
+                        if ((result.Value.ResultCode == TargetResultCode.Failure && !result.Value.TargetFailureDoesntCauseBuildFailure)
+                            || result.Value.AfterTargetsHaveFailed)
+                        {
+                            return BuildResultCode.Failure;
+                        }
                     }
                 }
 
