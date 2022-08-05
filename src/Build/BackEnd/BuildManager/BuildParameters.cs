@@ -218,6 +218,8 @@ namespace Microsoft.Build.Execution
 
         private string _outputResultsCacheFile;
 
+        private bool _reportFileAccesses;
+
         /// <summary>
         /// Constructor for those who intend to set all properties themselves.
         /// </summary>
@@ -301,6 +303,7 @@ namespace Microsoft.Build.Execution
             _projectIsolationMode = other.ProjectIsolationMode;
             _inputResultsCacheFiles = other._inputResultsCacheFiles;
             _outputResultsCacheFile = other._outputResultsCacheFile;
+            _reportFileAccesses = other._reportFileAccesses;
             DiscardBuildResults = other.DiscardBuildResults;
             LowPriority = other.LowPriority;
             ProjectCacheDescriptor = other.ProjectCacheDescriptor;
@@ -799,6 +802,15 @@ namespace Microsoft.Build.Execution
         }
 
         /// <summary>
+        /// Gets or sets a value indicating wheteher file accesses should be reported to any configured project cache plugins.
+        /// </summary>
+        public bool ReportFileAccesses
+        {
+            get => _reportFileAccesses;
+            set => _reportFileAccesses = value;
+        }
+
+        /// <summary>
         /// Determines whether MSBuild will save the results of builds after EndBuild to speed up future builds.
         /// </summary>
         public bool DiscardBuildResults { get; set; } = false;
@@ -872,6 +884,7 @@ namespace Microsoft.Build.Execution
             translator.TranslateEnum(ref _projectLoadSettings, (int)_projectLoadSettings);
             translator.Translate(ref _interactive);
             translator.TranslateEnum(ref _projectIsolationMode, (int)_projectIsolationMode);
+            translator.Translate(ref _reportFileAccesses);
 
             // ProjectRootElementCache is not transmitted.
             // ResetCaches is not transmitted.
