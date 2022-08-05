@@ -1025,6 +1025,7 @@ namespace Microsoft.Build.UnitTests
                                         lowPriority: false,
                                         inputResultsCaches: null,
                                         outputResultsCache: null,
+                                        reportFileAccesses: false,
                                         commandLine: null);
                 }
                 finally
