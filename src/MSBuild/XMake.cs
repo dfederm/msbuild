@@ -1296,6 +1296,7 @@ namespace Microsoft.Build.CommandLine
                     parameters.ProjectIsolationMode = isolateProjects;
                     parameters.InputResultsCacheFiles = inputResultsCaches;
                     parameters.OutputResultsCacheFile = outputResultsCache;
+                    parameters.ReportFileAccesses = reportFileAccesses;
 
                     // Propagate the profiler flag into the project load settings so the evaluator
                     // can pick it up
