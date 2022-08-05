@@ -211,10 +211,10 @@ namespace Microsoft.Build.BackEnd
         /// <summary>
         /// Shuts down all of the managed nodes permanently.
         /// </summary>
-        public void ShutdownAllNodes()
-        {
-            ShutdownAllNodes(ComponentHost.BuildParameters.EnableNodeReuse, NodeContextTerminated);
-        }
+        public void ShutdownAllNodes() => ShutdownAllNodes(
+            nodeReuse: ComponentHost.BuildParameters.EnableNodeReuse,
+            reportFileAccesses: ComponentHost.BuildParameters.ReportFileAccesses,
+            NodeContextTerminated);
         #endregion
 
         #region IBuildComponent Members
@@ -539,7 +539,10 @@ namespace Microsoft.Build.BackEnd
 
             // Start the new process.  We pass in a node mode with a node number of 2, to indicate that we
             // want to start up an MSBuild task host node.
-            string commandLineArgs = $" /nologo /nodemode:2 /nodereuse:{ComponentHost.BuildParameters.EnableNodeReuse} /low:{ComponentHost.BuildParameters.LowPriority} ";
+            string commandLineArgs = $" /nologo /nodemode:2" +
+                $" /nodereuse:{ComponentHost.BuildParameters.EnableNodeReuse}" +
+                $" /low:{ComponentHost.BuildParameters.LowPriority}" +
+                $" /reportfileaccesses:{ComponentHost.BuildParameters.ReportFileAccesses.ToString().ToLower()}";
 
             string msbuildLocation = GetMSBuildLocationFromHostContext(hostContext);
 
