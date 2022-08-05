@@ -2230,7 +2230,7 @@ namespace Microsoft.Build.CommandLine
             }
             else if (commandLineSwitches.IsParameterizedSwitchSet(CommandLineSwitches.ParameterizedSwitch.NodeMode))
             {
-                StartLocalNode(commandLineSwitches, lowPriority);
+                StartLocalNode(commandLineSwitches, lowPriority, reportFileAccesses);
             }
             else
             {
@@ -2736,7 +2736,7 @@ namespace Microsoft.Build.CommandLine
         /// Uses the input from thinNodeMode switch to start a local node server
         /// </summary>
         /// <param name="commandLineSwitches"></param>
-        private static void StartLocalNode(CommandLineSwitches commandLineSwitches, bool lowpriority)
+        private static void StartLocalNode(CommandLineSwitches commandLineSwitches, bool lowpriority, bool reportFileAccesses)
         {
             string[] input = commandLineSwitches[CommandLineSwitches.ParameterizedSwitch.NodeMode];
             int nodeModeNumber = 0;
@@ -2771,7 +2771,7 @@ namespace Microsoft.Build.CommandLine
                     // If FEATURE_NODE_REUSE is OFF, just validates that the switch is OK, and always returns False
                     bool nodeReuse = ProcessNodeReuseSwitch(commandLineSwitches[CommandLineSwitches.ParameterizedSwitch.NodeReuse]);
                     OutOfProcNode node = new OutOfProcNode();
-                    shutdownReason = node.Run(nodeReuse, lowpriority, out nodeException);
+                    shutdownReason = node.Run(nodeReuse, lowpriority, reportFileAccesses, out nodeException);
 
                     FileUtilities.ClearCacheDirectory();
                 }

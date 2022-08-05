@@ -13,6 +13,8 @@ namespace Microsoft.Build.BackEnd
     {
         private readonly bool _enableReuse;
 
+        private readonly bool _reportFileAccesses;
+
         internal bool LowPriority { get; private set; }
 
         /// <summary>
@@ -20,10 +22,12 @@ namespace Microsoft.Build.BackEnd
         /// </summary>
         /// <param name="enableReuse">Whether this node may be reused for a later build.</param>
         /// <param name="lowPriority">Whether this node is low priority.</param>
-        internal NodeEndpointOutOfProc(bool enableReuse, bool lowPriority)
+        /// <param name="reportFileAccesses">Whether this node is reporting file accesses.</param>
+        internal NodeEndpointOutOfProc(bool enableReuse, bool lowPriority, bool reportFileAccesses)
         {
             _enableReuse = enableReuse;
             LowPriority = lowPriority;
+            _reportFileAccesses = reportFileAccesses;
 
             InternalConstruct();
         }
@@ -37,7 +41,8 @@ namespace Microsoft.Build.BackEnd
                 taskHost: false,
                 architectureFlagToSet: XMakeAttributes.GetCurrentMSBuildArchitecture(),
                 nodeReuse: _enableReuse,
-                lowPriority: LowPriority);
+                lowPriority: LowPriority,
+                reportFileAccesses: _reportFileAccesses);
             return new Handshake(handshakeOptions);
         }
     }
