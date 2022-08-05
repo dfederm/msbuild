@@ -67,10 +67,17 @@ namespace Microsoft.Build.BackEnd
         /// </summary>
         /// <param name="enableNodeReuse">Is reuse of build nodes allowed?</param>
         /// <param name="enableLowPriority">Is the build running at low priority?</param>
-        internal static Handshake GetHandshake(bool enableNodeReuse, bool enableLowPriority)
+        /// <param name="reportFileAccesses">Are nodes reporting file accesses?</param>
+        internal static Handshake GetHandshake(bool enableNodeReuse, bool enableLowPriority, bool reportFileAccesses)
         {
-            CommunicationsUtilities.Trace("MSBUILDNODEHANDSHAKESALT=\"{0}\", msbuildDirectory=\"{1}\", enableNodeReuse={2}, enableLowPriority={3}", Traits.MSBuildNodeHandshakeSalt, BuildEnvironmentHelper.Instance.MSBuildToolsDirectory32, enableNodeReuse, enableLowPriority);
-            return new Handshake(CommunicationsUtilities.GetHandshakeOptions(taskHost: false, architectureFlagToSet: XMakeAttributes.GetCurrentMSBuildArchitecture(), nodeReuse: enableNodeReuse, lowPriority: enableLowPriority));
+            CommunicationsUtilities.Trace("MSBUILDNODEHANDSHAKESALT=\"{0}\", msbuildDirectory=\"{1}\", enableNodeReuse={2}, enableLowPriority={3}, reportFileAccesses={4}", Traits.MSBuildNodeHandshakeSalt, BuildEnvironmentHelper.Instance.MSBuildToolsDirectory32, enableNodeReuse, enableLowPriority, reportFileAccesses);
+            HandshakeOptions handshakeOptions = CommunicationsUtilities.GetHandshakeOptions(
+                taskHost: false,
+                architectureFlagToSet: XMakeAttributes.GetCurrentMSBuildArchitecture(),
+                nodeReuse: enableNodeReuse,
+                lowPriority: enableLowPriority,
+                reportFileAccesses: reportFileAccesses);
+            return new Handshake(handshakeOptions);
         }
 
         /// <summary>
@@ -94,11 +101,20 @@ namespace Microsoft.Build.BackEnd
             // want to start up just a standard MSBuild out-of-proc node.
             // Note: We need to always pass /nodeReuse to ensure the value for /nodeReuse from msbuild.rsp
             // (next to msbuild.exe) is ignored.
-            string commandLineArgs = $"/nologo /nodemode:1 /nodeReuse:{ComponentHost.BuildParameters.EnableNodeReuse.ToString().ToLower()} /low:{ComponentHost.BuildParameters.LowPriority.ToString().ToLower()}";
+            string commandLineArgs = $"/nologo /nodemode:1" +
+                $" /nodeReuse:{ComponentHost.BuildParameters.EnableNodeReuse.ToString().ToLower()}" +
+                $" /low:{ComponentHost.BuildParameters.LowPriority.ToString().ToLower()}" +
+                $" /reportfileaccesses:{ComponentHost.BuildParameters.ReportFileAccesses.ToString().ToLower()}";
 
             CommunicationsUtilities.Trace("Starting to acquire {1} new or existing node(s) to establish nodes from ID {0} to {2}...", nextNodeId, numberOfNodesToCreate, nextNodeId + numberOfNodesToCreate - 1);
 
-            Handshake hostHandshake = new(CommunicationsUtilities.GetHandshakeOptions(taskHost: false, architectureFlagToSet: XMakeAttributes.GetCurrentMSBuildArchitecture(), nodeReuse: ComponentHost.BuildParameters.EnableNodeReuse, lowPriority: ComponentHost.BuildParameters.LowPriority));
+            HandshakeOptions handshakeOptions = CommunicationsUtilities.GetHandshakeOptions(
+                taskHost: false,
+                architectureFlagToSet: XMakeAttributes.GetCurrentMSBuildArchitecture(),
+                nodeReuse: ComponentHost.BuildParameters.EnableNodeReuse,
+                lowPriority: ComponentHost.BuildParameters.LowPriority,
+                reportFileAccesses: ComponentHost.BuildParameters.ReportFileAccesses);
+            Handshake hostHandshake = new(handshakeOptions);
             IList<NodeContext> nodeContexts = GetNodes(null, commandLineArgs, nextNodeId, factory, hostHandshake, NodeContextCreated, NodeContextTerminated, numberOfNodesToCreate);
 
             if (nodeContexts.Count > 0)
@@ -159,11 +175,14 @@ namespace Microsoft.Build.BackEnd
             // they must have been started with node reuse.
             bool nodeReuse = ComponentHost.BuildParameters?.EnableNodeReuse ?? true;
 
+            // TODO dfederm: what do we do here?
+            bool reportFileAccesses = ComponentHost.BuildParameters?.ReportFileAccesses ?? false;
+
             // To avoid issues with mismatched priorities not shutting
             // down all the nodes on exit, we will attempt to shutdown
             // all matching nodes with and without the priority bit set.
             // This means we need both versions of the handshake.
-            ShutdownAllNodes(nodeReuse, NodeContextTerminated);
+            ShutdownAllNodes(nodeReuse, reportFileAccesses, NodeContextTerminated);
         }
 
         #endregion

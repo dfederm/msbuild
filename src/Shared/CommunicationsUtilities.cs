@@ -75,6 +75,11 @@ namespace Microsoft.Build.Internal
         /// ARM64 process
         /// </summary>
         Arm64 = 128,
+
+        /// <summary>
+        /// Whether nodes are reporting their file accesses.
+        /// </summary>
+        ReportFileAccesses = 256,
     }
 
     internal class Handshake
@@ -550,7 +555,13 @@ namespace Microsoft.Build.Internal
         /// <summary>
         /// Given the appropriate information, return the equivalent HandshakeOptions.
         /// </summary>
-        internal static HandshakeOptions GetHandshakeOptions(bool taskHost, string architectureFlagToSet = null, bool nodeReuse = false, bool lowPriority = false, IDictionary<string, string> taskHostParameters = null)
+        internal static HandshakeOptions GetHandshakeOptions(
+            bool taskHost,
+            string architectureFlagToSet = null,
+            bool nodeReuse = false,
+            bool lowPriority = false,
+            bool reportFileAccesses = false,
+            IDictionary<string, string> taskHostParameters = null)
         {
             HandshakeOptions context = taskHost ? HandshakeOptions.TaskHost : HandshakeOptions.None;
 
@@ -626,10 +637,17 @@ namespace Microsoft.Build.Internal
             {
                 context |= HandshakeOptions.NodeReuse;
             }
+
             if (lowPriority)
             {
                 context |= HandshakeOptions.LowPriority;
             }
+
+            if (reportFileAccesses)
+            {
+                context |= HandshakeOptions.ReportFileAccesses;
+            }
+
 #if FEATURE_SECURITY_PRINCIPAL_WINDOWS
             // If we are running in elevated privs, we will only accept a handshake from an elevated process as well.
             // Both the client and the host will calculate this separately, and the idea is that if they come out the same

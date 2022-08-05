@@ -211,36 +211,46 @@ namespace Microsoft.Build.Execution
         /// Starts up the node and processes messages until the node is requested to shut down.
         /// Assumes no node reuse.
         /// Assumes low priority is disabled.
+        /// Assumes reporting file accesses is disabled.
         /// </summary>
         /// <param name="shutdownException">The exception which caused shutdown, if any.</param>
         /// <returns>The reason for shutting down.</returns>
         public NodeEngineShutdownReason Run(out Exception shutdownException)
-        {
-            return Run(false, false, out shutdownException);
-        }
+            => Run(enableReuse: false, lowPriority: false, reportFileAccesses: false, out shutdownException);
 
         /// <summary>
         /// Starts up the node and processes messages until the node is requested to shut down.
         /// Assumes low priority is disabled.
+        /// Assumes reporting file accesses is disabled.
         /// </summary>
         /// <param name="enableReuse">Whether this node is eligible for reuse later.</param>
         /// <param name="shutdownException">The exception which caused shutdown, if any.</param>
         /// <returns>The reason for shutting down.</returns>
         public NodeEngineShutdownReason Run(bool enableReuse, out Exception shutdownException)
-        {
-            return Run(enableReuse, false, out shutdownException);
-        }
+            => Run(enableReuse, lowPriority: false, reportFileAccesses: false, out shutdownException);
 
         /// <summary>
         /// Starts up the node and processes messages until the node is requested to shut down.
+        /// Assumes reporting file accesses is disabled.
         /// </summary>
         /// <param name="enableReuse">Whether this node is eligible for reuse later.</param>
         /// <param name="lowPriority">Whether this node should be running with low priority.</param>
         /// <param name="shutdownException">The exception which caused shutdown, if any.</param>
         /// <returns>The reason for shutting down.</returns>
         public NodeEngineShutdownReason Run(bool enableReuse, bool lowPriority, out Exception shutdownException)
+            => Run(enableReuse, lowPriority, reportFileAccesses: false, out shutdownException);
+
+        /// <summary>
+        /// Starts up the node and processes messages until the node is requested to shut down.
+        /// </summary>
+        /// <param name="enableReuse">Whether this node is eligible for reuse later.</param>
+        /// <param name="lowPriority">Whether this node should be running with low priority.</param>
+        /// <param name="reportFileAccesses">Whether this node should report file accesses.</param>
+        /// <param name="shutdownException">The exception which caused shutdown, if any.</param>
+        /// <returns>The reason for shutting down.</returns>
+        public NodeEngineShutdownReason Run(bool enableReuse, bool lowPriority, bool reportFileAccesses, out Exception shutdownException)
         {
-            _nodeEndpoint = new NodeEndpointOutOfProc(enableReuse, lowPriority);
+            _nodeEndpoint = new NodeEndpointOutOfProc(enableReuse, lowPriority, reportFileAccesses);
             _nodeEndpoint.OnLinkStatusChanged += OnLinkStatusChanged;
             _nodeEndpoint.Listen(this);
 
