@@ -301,6 +301,7 @@ namespace Microsoft.Build.Execution
             _isolateProjects = other._isolateProjects;
             _inputResultsCacheFiles = other._inputResultsCacheFiles;
             _outputResultsCacheFile = other._outputResultsCacheFile;
+            ReportFileAccesses = other.ReportFileAccesses;
             DiscardBuildResults = other.DiscardBuildResults;
             LowPriority = other.LowPriority;
             ProjectCacheDescriptor = other.ProjectCacheDescriptor;
@@ -781,6 +782,11 @@ namespace Microsoft.Build.Execution
         }
 
         /// <summary>
+        /// Gets or sets a value indicating wheteher file accesses should be reported to any configured project cache plugins.
+        /// </summary>
+        public bool ReportFileAccesses { get; set; }
+
+        /// <summary>
         /// Determines whether MSBuild will save the results of builds after EndBuild to speed up future builds.
         /// </summary>
         public bool DiscardBuildResults { get; set; } = false;
@@ -858,12 +864,12 @@ namespace Microsoft.Build.Execution
             // ProjectRootElementCache is not transmitted.
             // ResetCaches is not transmitted.
             // LegacyThreadingSemantics is not transmitted.
-            // InputResultsCacheFiles and OutputResultsCacheFile are not transmitted, as they are only used by the BuildManager
+            // InputResultsCacheFiles, OutputResultsCacheFile, and ReportFileAccesses are not transmitted, as they are only used by the BuildManager
             // DiscardBuildResults is not transmitted.
             // LowPriority is passed as an argument to new nodes, so it doesn't need to be transmitted here.
         }
 
-#region INodePacketTranslatable Members
+        #region INodePacketTranslatable Members
 
         /// <summary>
         /// The class factory for deserialization.
