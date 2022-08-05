@@ -140,8 +140,9 @@ namespace Microsoft.Build.BackEnd
         /// Shuts down all of the managed nodes permanently.
         /// </summary>
         /// <param name="nodeReuse">Whether to reuse the node</param>
+        /// <param name="reportFileAccesses">Whether nodes are reporting file accesses</param>
         /// <param name="terminateNode">Delegate used to tell the node provider that a context has terminated</param>
-        protected void ShutdownAllNodes(bool nodeReuse, NodeContextTerminateDelegate terminateNode)
+        protected void ShutdownAllNodes(bool nodeReuse, bool reportFileAccesses, NodeContextTerminateDelegate terminateNode)
         {
             // INodePacketFactory
             INodePacketFactory factory = new NodePacketFactory();
@@ -160,14 +161,10 @@ namespace Microsoft.Build.BackEnd
                 // A 2013 comment suggested some nodes take this long to respond, so a smaller timeout would miss nodes.
                 int timeout = 30;
 
-                // Attempt to connect to the process with the handshake without low priority.
-                Stream nodeStream = TryConnectToProcess(nodeProcess.Id, timeout, NodeProviderOutOfProc.GetHandshake(nodeReuse, false));
-
-                if (nodeStream == null)
-                {
-                    // If we couldn't connect attempt to connect to the process with the handshake including low priority.
-                    nodeStream = TryConnectToProcess(nodeProcess.Id, timeout, NodeProviderOutOfProc.GetHandshake(nodeReuse, true));
-                }
+                // To avoid issues with mismatched priorities not shutting down all the nodes on exit, we will attempt to shutdown
+                // all matching nodes with and without the priority bit set. This means we need both versions of the handshake.
+                Stream nodeStream = TryConnectToProcess(nodeProcess.Id, timeout, NodeProviderOutOfProc.GetHandshake(nodeReuse, enableLowPriority: false, reportFileAccesses))
+                    ?? TryConnectToProcess(nodeProcess.Id, timeout, NodeProviderOutOfProc.GetHandshake(nodeReuse, enableLowPriority: true, reportFileAccesses));
 
                 if (nodeStream != null)
                 {
