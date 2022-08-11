@@ -41,6 +41,8 @@ using Microsoft.Build.Internal;
 
 #nullable disable
 
+#pragma warning disable RA001 // Do not use System.Diagnostics.Contract class.
+
 namespace Microsoft.Build.Collections
 {
     /// <summary>

@@ -31,6 +31,7 @@
 
     <PackageReference Include="System.Collections.Immutable" />
     <PackageReference Include="System.Configuration.ConfigurationManager" />
+    <PackageReference Include="System.Security.Principal.Windows" />
     <PackageReference Include="System.Threading.Tasks.Dataflow" />
     <PackageReference Include="System.Text.Json" />
 
@@ -38,6 +39,11 @@
     <PackageReference Include="System.Reflection.MetadataLoadContext" />
 
     <PackageReference Include="Microsoft.IO.Redist" Condition="'$(FeatureMSIORedist)' == 'true'" />
+
+    <PackageReference Include="BuildXL.Processes" />
+    <!-- Unused indirect dependencies of BuildXL.Processes which causes arch mismatches -->
+    <PackageReference Include="RocksDbNative" IncludeAssets="None" PrivateAssets="All" />
+    <PackageReference Include="RocksDbSharp" IncludeAssets="None" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework' and '$(DotNetBuildFromSource)' != 'true'">
@@ -50,7 +56,6 @@
 
   <ItemGroup Condition="'$(TargetFrameworkIdentifier)' != '.NETFramework'">
     <PackageReference Include="System.Reflection.Metadata" />
-    <PackageReference Include="System.Security.Principal.Windows" />
     <PackageReference Include="System.Text.Encoding.CodePages" />
   </ItemGroup>
 
