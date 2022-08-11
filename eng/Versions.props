@@ -33,7 +33,7 @@
     <SystemReflectionMetadataVersion>6.0.0</SystemReflectionMetadataVersion>
     <SystemResourcesExtensionsPackageVersion>6.0.0</SystemResourcesExtensionsPackageVersion>
     <SystemSecurityPermissionsVersion>6.0.0</SystemSecurityPermissionsVersion>
-    <SystemSecurityPrincipalWindowsVersion>5.0.0</SystemSecurityPrincipalWindowsVersion>
+    <SystemSecurityPrincipalWindowsVersion>6.0.0-preview.5.21301.5</SystemSecurityPrincipalWindowsVersion>
     <SystemTextEncodingCodePagesVersion>6.0.0</SystemTextEncodingCodePagesVersion>
   </PropertyGroup>
   <!-- Toolset Dependencies -->

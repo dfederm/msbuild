@@ -13,6 +13,13 @@
     <PackageReference Update="BenchmarkDotNet" Version="0.13.1" />
     <PackageReference Update="BenchmarkDotNet" Condition="'$(BenchmarkDotNetVersion)' != ''" Version="$(BenchmarkDotNetVersion)" />
 
+    <PackageReference Update="BuildXL.Processes" Version="0.1.0-20220804.0" />
+    <PackageReference Update="BuildXL.Processes" Condition="'$(BuildXLProcessesVersion)' != ''" Version="$(BuildXLProcessesVersion)" />
+
+    <!-- Unused indirect dependencies of BuildXL.Processes which causes arch mismatches -->
+    <PackageReference Update="RocksDbNative" Version="6.10.2-b20220621.2" />
+    <PackageReference Update="RocksDbSharp" Version="6.10.2-b20220621.2" />
+
     <PackageReference Update="LargeAddressAware" Version="1.0.5" />
     <PackageReference Update="LargeAddressAware" Condition="'$(LargeAddressAwareVersion)' != ''" Version="$(LargeAddressAwareVersion)" />
 
