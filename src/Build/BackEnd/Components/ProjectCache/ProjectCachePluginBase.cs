@@ -5,6 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Build.Execution;
 
+// TODO dfederm: Don't directly use BXL's since this will end up being exposed to project cache plugin implementations.
+using static BuildXL.Processes.IDetoursEventListener;
+
 namespace Microsoft.Build.Experimental.ProjectCache
 {
     /// <summary>
@@ -39,5 +42,36 @@ namespace Microsoft.Build.Experimental.ProjectCache
         ///     Errors are checked via <see cref="PluginLoggerBase.HasLoggedErrors" />.
         /// </summary>
         public abstract Task EndBuildAsync(PluginLoggerBase logger, CancellationToken cancellationToken);
+
+        /// <summary>
+        ///     Called for each file access from an MSBuild node or one of its children.
+        /// </summary>
+#pragma warning disable CS3001 // Argument type is not CLS-compliant.
+        // TODO dfederm: Fix suppression
+        public virtual void HandleFileAccess(FileAccessContext fileAccessContext, FileAccessData fileAccessData)
+#pragma warning restore CS3001 // Argument type is not CLS-compliant
+        {
+        }
+
+        /// <summary>
+        ///     Called for each new child process created by an MSBuild node or one of its children.
+        /// </summary>
+#pragma warning disable CS3001 // Argument type is not CLS-compliant.
+        // TODO dfederm: Fix suppression
+        public virtual void HandleProcess(FileAccessContext fileAccessContext, ProcessData processData)
+#pragma warning restore CS3001 // Argument type is not CLS-compliant
+        {
+        }
+
+        /// <summary>
+        ///     Called when a build request finishes execution. This provides an opportunity for the plugin to take action on the
+        ///     aggregated file access reports from <see cref="HandleFileAccess(FileAccessContext, FileAccessData)"/>.
+        ///     Errors are checked via <see cref="PluginLoggerBase.HasLoggedErrors" />.
+        /// </summary>
+        public virtual Task HandleProjectFinishedAsync(
+            FileAccessContext fileAccessContext,
+            BuildResult buildResult,
+            PluginLoggerBase logger,
+            CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }
