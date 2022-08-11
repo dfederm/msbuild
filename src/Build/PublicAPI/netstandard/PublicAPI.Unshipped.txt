@@ -22,4 +22,6 @@ Microsoft.Build.Experimental.OutOfProcServerNode.BuildCallback
 Microsoft.Build.Experimental.OutOfProcServerNode.OutOfProcServerNode(Microsoft.Build.Experimental.OutOfProcServerNode.BuildCallback buildFunction) -> void
 Microsoft.Build.Experimental.OutOfProcServerNode.Run(out System.Exception shutdownException) -> Microsoft.Build.Execution.NodeEngineShutdownReason
 static Microsoft.Build.Experimental.MSBuildClient.ShutdownServer(System.Threading.CancellationToken cancellationToken) -> bool
-
+virtual Microsoft.Build.Experimental.ProjectCache.ProjectCachePluginBase.HandleFileAccess(BuildXL.Processes.IDetoursEventListener.FileAccessData fileAccessData, Microsoft.Build.Execution.BuildRequestData buildRequest) -> void
+virtual Microsoft.Build.Experimental.ProjectCache.ProjectCachePluginBase.HandleProcess(BuildXL.Processes.IDetoursEventListener.ProcessData processData, Microsoft.Build.Execution.BuildRequestData buildRequest) -> void
+virtual Microsoft.Build.Experimental.ProjectCache.ProjectCachePluginBase.HandleProjectFinishedAsync(Microsoft.Build.Execution.BuildRequestData buildRequest, Microsoft.Build.Execution.BuildResult buildResult, Microsoft.Build.Experimental.ProjectCache.PluginLoggerBase logger, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task
