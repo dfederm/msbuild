@@ -2,10 +2,19 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
+using BuildXL.Processes;
+using BuildXL.Utilities;
+using BuildXL.Utilities.Configuration;
+using BuildXL.Utilities.Core;
 using Microsoft.Build.Exceptions;
+using Microsoft.Build.FileAccesses;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Internal;
 using Microsoft.Build.Shared;
@@ -16,22 +25,15 @@ using BackendNativeMethods = Microsoft.Build.BackEnd.NativeMethods;
 
 namespace Microsoft.Build.BackEnd
 {
-    internal class NodeLauncher
+    internal static class NodeLauncher
     {
-        /// <summary>
-        /// Creates a new MSBuild process
-        /// </summary>
-        public Process Start(string msbuildLocation, string commandLineArgs)
-        {
-            // Disable MSBuild server for a child process.
-            // In case of starting msbuild server it prevents an infinite recurson. In case of starting msbuild node we also do not want this variable to be set.
-            return DisableMSBuildServer(() => StartInternal(msbuildLocation, commandLineArgs));
-        }
+        // TODO dfederm: This is bad. Make NodeLauncher a component?
+        private static List<ISandboxedProcess> SandboxedProcesses = new();
 
         /// <summary>
         /// Creates a new MSBuild process
         /// </summary>
-        private Process StartInternal(string msbuildLocation, string commandLineArgs)
+        public static Process Start(string msbuildLocation, string commandLineArgs, IBuildComponentHost componentHost, int nodeId)
         {
             // Should always have been set already.
             ErrorUtilities.VerifyThrowInternalLength(msbuildLocation, nameof(msbuildLocation));
@@ -41,10 +43,40 @@ namespace Microsoft.Build.BackEnd
                 throw new BuildAbortedException(ResourceUtilities.FormatResourceStringStripCodeAndKeyword("CouldNotFindMSBuildExe", msbuildLocation));
             }
 
+            // Disable MSBuild server for a child process.
+            // In case of starting msbuild server it prevents an infinite recurson. In case of starting msbuild node we also do not want this variable to be set.
+            return DisableMSBuildServer(() => StartInternal(msbuildLocation, commandLineArgs, componentHost, nodeId));
+        }
+
+        private static Process StartInternal(string msbuildLocation, string commandLineArgs, IBuildComponentHost componentHost, int nodeId)
+        {
+            CommunicationsUtilities.Trace("Launching node from {0}", msbuildLocation);
+
             // Repeat the executable name as the first token of the command line because the command line
             // parser logic expects it and will otherwise skip the first argument
             commandLineArgs = $"\"{msbuildLocation}\" {commandLineArgs}";
 
+            string msbuildExe = msbuildLocation;
+
+#if RUNTIME_TYPE_NETCORE || MONO
+            // Mono automagically uses the current mono, to execute a managed assembly
+            if (!NativeMethodsShared.IsMono)
+            {
+                // Run the child process with the same host as the currently-running process.
+                msbuildExe = CurrentHost.GetCurrentHost();
+            }
+#endif
+
+            return componentHost?.BuildParameters?.ReportFileAccesses ?? false
+                ? StartDetouredProcess(msbuildExe, commandLineArgs, componentHost, nodeId)
+                : StartProcess(msbuildLocation, msbuildExe, commandLineArgs);
+        }
+
+        /// <summary>
+        /// Creates a new MSBuild process
+        /// </summary>
+        private static Process StartProcess(string msbuildLocation, string msbuildExe, string commandLineArgs)
+        {
             BackendNativeMethods.STARTUP_INFO startInfo = new();
             startInfo.cb = Marshal.SizeOf<BackendNativeMethods.STARTUP_INFO>();
 
@@ -56,7 +88,7 @@ namespace Microsoft.Build.BackEnd
                 creationFlags = BackendNativeMethods.NORMALPRIORITYCLASS;
             }
 
-            if (String.IsNullOrEmpty(Environment.GetEnvironmentVariable("MSBUILDNODEWINDOW")))
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MSBUILDNODEWINDOW")))
             {
                 if (!Traits.Instance.EscapeHatches.EnsureStdOutForChildNodesIsPrimaryStdout)
                 {
@@ -75,23 +107,10 @@ namespace Microsoft.Build.BackEnd
                 creationFlags |= BackendNativeMethods.CREATE_NEW_CONSOLE;
             }
 
-            CommunicationsUtilities.Trace("Launching node from {0}", msbuildLocation);
-
-            string exeName = msbuildLocation;
-
-#if RUNTIME_TYPE_NETCORE || MONO
-            // Mono automagically uses the current mono, to execute a managed assembly
-            if (!NativeMethodsShared.IsMono)
-            {
-                // Run the child process with the same host as the currently-running process.
-                exeName = CurrentHost.GetCurrentHost();
-            }
-#endif
-
             if (!NativeMethodsShared.IsWindows)
             {
                 ProcessStartInfo processStartInfo = new ProcessStartInfo();
-                processStartInfo.FileName = exeName;
+                processStartInfo.FileName = msbuildExe;
                 processStartInfo.Arguments = commandLineArgs;
                 if (!Traits.Instance.EscapeHatches.EnsureStdOutForChildNodesIsPrimaryStdout)
                 {
@@ -121,14 +140,14 @@ namespace Microsoft.Build.BackEnd
                     throw new NodeFailedToLaunchException(ex);
                 }
 
-                CommunicationsUtilities.Trace("Successfully launched {1} node with PID {0}", process.Id, exeName);
+                CommunicationsUtilities.Trace("Successfully launched {1} node with PID {0}", process.Id, msbuildExe);
                 return process;
             }
             else
             {
 #if RUNTIME_TYPE_NETCORE
                 // Repeat the executable name in the args to suit CreateProcess
-                commandLineArgs = $"\"{exeName}\" {commandLineArgs}";
+                commandLineArgs = $"\"{msbuildExe}\" {commandLineArgs}";
 #endif
 
                 BackendNativeMethods.PROCESS_INFORMATION processInfo = new();
@@ -138,7 +157,7 @@ namespace Microsoft.Build.BackEnd
                 threadSecurityAttributes.nLength = Marshal.SizeOf<BackendNativeMethods.SECURITY_ATTRIBUTES>();
 
                 bool result = BackendNativeMethods.CreateProcess(
-                        exeName,
+                        msbuildExe,
                         commandLineArgs,
                         ref processSecurityAttributes,
                         ref threadSecurityAttributes,
@@ -176,12 +195,72 @@ namespace Microsoft.Build.BackEnd
                     NativeMethodsShared.CloseHandle(processInfo.hThread);
                 }
 
-                CommunicationsUtilities.Trace("Successfully launched {1} node with PID {0}", childProcessId, exeName);
+                CommunicationsUtilities.Trace("Successfully launched {1} node with PID {0}", childProcessId, msbuildExe);
                 return Process.GetProcessById(childProcessId);
             }
         }
 
-        private Process DisableMSBuildServer(Func<Process> func)
+        private static Process StartDetouredProcess(string msbuildExe, string commandLineArgs, IBuildComponentHost componentHost, int nodeId)
+        {
+            IFileAccessManager fileAccessManager = (IFileAccessManager)componentHost.GetComponent(BuildComponentType.FileAccessManager);
+
+            var eventListener = new DetoursEventListener(fileAccessManager, nodeId);
+            eventListener.SetMessageHandlingFlags(MessageHandlingFlags.DebugMessageNotify | MessageHandlingFlags.FileAccessNotify | MessageHandlingFlags.ProcessDataNotify | MessageHandlingFlags.ProcessDetoursStatusNotify);
+
+            var info = new SandboxedProcessInfo(
+                fileStorage: null, // Don't write stdout/stderr to files
+                fileName: msbuildExe,
+                disableConHostSharing: false,
+                detoursEventListener: eventListener,
+                createJobObjectForCurrentProcess: false)
+            {
+                SandboxKind = SandboxKind.Default,
+                PipDescription = "MSBuild",
+                PipSemiStableHash = 0,
+                Arguments = commandLineArgs,
+                EnvironmentVariables = EnvironmentalBuildParameters.Instance,
+                MaxLengthInMemory = 0, // Don't buffer any output
+            };
+
+            // FileAccessManifest.AddScope is used to define the list of files which the running process is allowed to access and what kinds of file accesses are allowed
+            // Tracker internally uses AbsolutePath.Invalid to represent the root, just like Unix '/' root.
+            // this code allows all types of accesses for all files
+            info.FileAccessManifest.AddScope(
+                AbsolutePath.Invalid,
+                FileAccessPolicy.MaskNothing,
+                FileAccessPolicy.AllowAll | FileAccessPolicy.ReportAccess);
+
+            // Support shared compilation
+            info.FileAccessManifest.ChildProcessesToBreakawayFromSandbox = new string[] { NativeMethodsShared.IsWindows ? "VBCSCompiler.exe" : "VBCSCompiler" };
+            info.FileAccessManifest.MonitorChildProcesses = true;
+            info.FileAccessManifest.IgnoreReparsePoints = true;
+            info.FileAccessManifest.UseExtraThreadToDrainNtClose = false;
+            info.FileAccessManifest.UseLargeNtClosePreallocatedList = true;
+            info.FileAccessManifest.LogProcessData = true;
+
+            // needed for logging process arguments when a new process is invoked; see DetoursEventListener.cs
+            info.FileAccessManifest.ReportProcessArgs = true;
+
+            // By default, Domino sets the timestamp of all input files to January 1, 1970
+            // This breaks some tools like Robocopy which will not copy a file to the destination if the file exists at the destination and has a timestamp that is more recent than the source file
+            info.FileAccessManifest.NormalizeReadTimestamps = false;
+
+            // If a process exits but its child processes survive, Tracker waits 30 seconds by default to wait for this process to exit.
+            // This slows down C++ builds in which mspdbsrv.exe doesn't exit when it's parent exits. Set this time to 0.
+            info.NestedProcessTerminationTimeout = TimeSpan.Zero;
+
+            // TODO dfederm: Disposal?
+            ISandboxedProcess sp = SandboxedProcessFactory.StartAsync(info, forceSandboxing: false).GetAwaiter().GetResult();
+            lock (SandboxedProcesses)
+            {
+                SandboxedProcesses.Add(sp);
+            }
+
+            CommunicationsUtilities.Trace("Successfully launched {1} node with PID {0}", sp.ProcessId, msbuildExe);
+            return Process.GetProcessById(sp.ProcessId);
+        }
+
+        private static Process DisableMSBuildServer(Func<Process> func)
         {
             string useMSBuildServerEnvVarValue = Environment.GetEnvironmentVariable(Traits.UseMSBuildServerEnvVarName);
             try
@@ -198,6 +277,92 @@ namespace Microsoft.Build.BackEnd
                 {
                     Environment.SetEnvironmentVariable(Traits.UseMSBuildServerEnvVarName, useMSBuildServerEnvVarValue);
                 }
+            }
+        }
+
+        private sealed class EnvironmentalBuildParameters : BuildParameters.IBuildParameters
+        {
+            private readonly Dictionary<string, string> _envVars;
+
+            private EnvironmentalBuildParameters()
+            {
+                var envVars = new Dictionary<string, string>();
+                foreach (DictionaryEntry baseVar in Environment.GetEnvironmentVariables())
+                {
+                    envVars.Add((string)baseVar.Key, (string)baseVar.Value);
+                }
+
+                _envVars = envVars;
+            }
+
+            private EnvironmentalBuildParameters(Dictionary<string, string> envVars)
+            {
+                _envVars = envVars;
+            }
+
+            public static EnvironmentalBuildParameters Instance { get; } = new EnvironmentalBuildParameters();
+
+            public string this[string key] => _envVars[key];
+
+            public BuildParameters.IBuildParameters Select(IEnumerable<string> keys)
+                => new EnvironmentalBuildParameters(keys.ToDictionary(key => key, key => _envVars[key]));
+
+            public BuildParameters.IBuildParameters Override(IEnumerable<KeyValuePair<string, string>> parameters)
+            {
+                var copy = new Dictionary<string, string>(_envVars);
+                foreach (KeyValuePair<string, string> param in parameters)
+                {
+                    copy[param.Key] = param.Value;
+                }
+
+                return new EnvironmentalBuildParameters(copy);
+            }
+
+            public IReadOnlyDictionary<string, string> ToDictionary() => _envVars;
+
+            public bool ContainsKey(string key) => _envVars.ContainsKey(key);
+        }
+
+        private sealed class DetoursEventListener : IDetoursEventListener
+        {
+            private readonly IFileAccessManager _fileAccessManager;
+            private readonly int _nodeId;
+
+            public DetoursEventListener(IFileAccessManager fileAccessManager, int nodeId)
+            {
+                _fileAccessManager = fileAccessManager;
+                _nodeId = nodeId;
+            }
+
+            public override void HandleDebugMessage(DebugData debugData)
+            {
+            }
+
+            public override void HandleFileAccess(FileAccessData fileAccessData) => _fileAccessManager.ReportFileAccess(
+                new Framework.FileAccess.FileAccessData(
+                    (Framework.FileAccess.ReportedFileOperation)fileAccessData.Operation,
+                    (Framework.FileAccess.RequestedAccess)fileAccessData.RequestedAccess,
+                    fileAccessData.ProcessId,
+                    fileAccessData.Error,
+                    (Framework.FileAccess.DesiredAccess)fileAccessData.DesiredAccess,
+                    (Framework.FileAccess.FlagsAndAttributes)fileAccessData.FlagsAndAttributes,
+                    fileAccessData.Path,
+                    fileAccessData.ProcessArgs,
+                    fileAccessData.IsAnAugmentedFileAccess),
+                _nodeId);
+
+            public override void HandleProcessData(ProcessData processData) => _fileAccessManager.ReportProcess(
+                new Framework.FileAccess.ProcessData(
+                    processData.ProcessName,
+                    processData.ProcessId,
+                    processData.ParentProcessId,
+                    processData.CreationDateTime,
+                    processData.ExitDateTime,
+                    processData.ExitCode),
+                _nodeId);
+
+            public override void HandleProcessDetouringStatus(ProcessDetouringStatusData data)
+            {
             }
         }
     }
