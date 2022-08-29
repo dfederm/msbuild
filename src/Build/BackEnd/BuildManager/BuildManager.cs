@@ -25,6 +25,7 @@ using Microsoft.Build.Eventing;
 using Microsoft.Build.Exceptions;
 using Microsoft.Build.Experimental;
 using Microsoft.Build.Experimental.ProjectCache;
+using Microsoft.Build.FileAccesses;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Framework.Telemetry;
 using Microsoft.Build.Graph;
@@ -523,9 +524,11 @@ namespace Microsoft.Build.Execution
 
                 InitializeCaches();
 
+                var fileAccessManager = ((IBuildComponentHost)this).GetComponent(BuildComponentType.FileAccessManager) as IFileAccessManager;
                 _projectCacheService = new ProjectCacheService(
                     this,
                     loggingService,
+                    fileAccessManager,
                     _buildParameters.ProjectCacheDescriptor);
 
                 _taskHostNodeManager = ((IBuildComponentHost)this).GetComponent(BuildComponentType.TaskHostNodeManager) as INodeManager;
@@ -2326,6 +2329,27 @@ namespace Microsoft.Build.Execution
                 if (configuration.ProjectInitialTargets == null)
                 {
                     configuration.ProjectInitialTargets = result.InitialTargets;
+                }
+            }
+
+            if (_buildSubmissions.TryGetValue(result.SubmissionId, out BuildSubmission submission))
+            {
+                BuildEventContext buildEventContext = BuildEventContext.Invalid;
+                lock (_syncLock)
+                {
+                    if (_projectStartedEvents.TryGetValue(result.SubmissionId, out BuildEventArgs originalArgs))
+                    {
+                        buildEventContext = originalArgs.BuildEventContext;
+                    }
+                }
+
+                try
+                {
+                    _projectCacheService.HandleBuildResultAsync(submission.BuildRequestData, result, buildEventContext, _executionCancellationTokenSource.Token).Wait();
+                }
+                catch (OperationCanceledException)
+                {
+                    // The build is being cancelled. Swallow any exceptions related specifically to cancellation.
                 }
             }
 
