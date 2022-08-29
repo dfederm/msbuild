@@ -16,6 +16,7 @@ using Microsoft.Build.BackEnd.Logging;
 using Microsoft.Build.Construction;
 using Microsoft.Build.Eventing;
 using Microsoft.Build.Execution;
+using Microsoft.Build.FileAccesses;
 using Microsoft.Build.FileSystem;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Graph;
@@ -34,6 +35,7 @@ namespace Microsoft.Build.Experimental.ProjectCache
 
         private readonly BuildManager _buildManager;
         private readonly ILoggingService _loggingService;
+        private readonly IFileAccessManager _fileAccessManager;
 
         private readonly ProjectCacheDescriptor? _globalProjectCacheDescriptor;
 
@@ -43,7 +45,11 @@ namespace Microsoft.Build.Experimental.ProjectCache
 
         private bool _isDisposed;
 
-        private record struct ProjectCachePlugin(string Name, ProjectCachePluginBase? Instance, ExceptionDispatchInfo? InitializationException = null);
+        private record struct ProjectCachePlugin(
+            string Name,
+            ProjectCachePluginBase? Instance,
+            FileAccessManager.HandlerRegistration? HandlerRegistration,
+            ExceptionDispatchInfo? InitializationException = null);
 
         /// <summary>
         /// An instanatiable version of MSBuildFileSystemBase not overriding any methods,
@@ -61,10 +67,12 @@ namespace Microsoft.Build.Experimental.ProjectCache
         public ProjectCacheService(
             BuildManager buildManager,
             ILoggingService loggingService,
+            IFileAccessManager fileAccessManager,
             ProjectCacheDescriptor? globalProjectCacheDescriptor)
         {
             _buildManager = buildManager;
             _loggingService = loggingService;
+            _fileAccessManager = fileAccessManager;
             _globalProjectCacheDescriptor = globalProjectCacheDescriptor;
         }
 
@@ -187,7 +195,7 @@ namespace Microsoft.Build.Experimental.ProjectCache
                 }
                 catch (Exception e)
                 {
-                    return new ProjectCachePlugin(pluginTypeName, Instance: null, ExceptionDispatchInfo.Capture(e));
+                    return new ProjectCachePlugin(pluginTypeName, Instance: null, HandlerRegistration: null, ExceptionDispatchInfo.Capture(e));
                 }
                 finally
                 {
@@ -218,11 +226,14 @@ namespace Microsoft.Build.Experimental.ProjectCache
                     ProjectCacheException.ThrowForErrorLoggedInsideTheProjectCache("ProjectCacheInitializationFailed");
                 }
 
-                return new ProjectCachePlugin(pluginTypeName, pluginInstance);
+                // TODO dfederm: FileAccessManager only supports 1 set of handlers. Probably need to aggregate in here.
+                FileAccessManager.HandlerRegistration handlerRegistration = _fileAccessManager.RegisterHandlers(pluginInstance.HandleFileAccess, pluginInstance.HandleProcess);
+
+                return new ProjectCachePlugin(pluginTypeName, pluginInstance, handlerRegistration);
             }
             catch (Exception e)
             {
-                return new ProjectCachePlugin(pluginTypeName, Instance: null, ExceptionDispatchInfo.Capture(e));
+                return new ProjectCachePlugin(pluginTypeName, Instance: null, HandlerRegistration: null, ExceptionDispatchInfo.Capture(e));
             }
             finally
             {
@@ -592,6 +603,66 @@ namespace Microsoft.Build.Experimental.ProjectCache
             }
         }
 
+        public async Task HandleBuildResultAsync(
+            BuildRequestData buildRequest,
+            BuildResult buildResult,
+            BuildEventContext buildEventContext,
+            CancellationToken cancellationToken)
+        {
+            if (_projectCachePlugins.IsEmpty)
+            {
+                return;
+            }
+
+            string? targetNames = buildRequest.TargetNames != null && buildRequest.TargetNames.Count > 0
+                ? string.Join(", ", buildRequest.TargetNames)
+                : null;
+
+            var buildEventFileInfo = new BuildEventFileInfo(buildRequest.ProjectFullPath);
+            var pluginLogger = new LoggingServiceToPluginLoggerAdapter(
+                _loggingService,
+                buildEventContext,
+                buildEventFileInfo);
+
+            Task[] tasks = new Task[_projectCachePlugins.Count];
+            int idx = 0;
+            foreach (KeyValuePair<ProjectCacheDescriptor, Lazy<Task<ProjectCachePlugin>>> kvp in _projectCachePlugins)
+            {
+                tasks[idx++] = Task.Run(
+                    async () =>
+                    {
+                        ProjectCachePlugin plugin = await kvp.Value.Value;
+
+                        // Rethrow any initialization exception.
+                        plugin.InitializationException?.Throw();
+
+                        ErrorUtilities.VerifyThrow(plugin.Instance != null, "Plugin '{0}' instance is null", plugin.Name);
+
+                        MSBuildEventSource.Log.ProjectCacheHandleBuildResultStart(plugin.Name, buildRequest.ProjectFullPath, targetNames);
+                        try
+                        {
+                            await plugin.Instance!.HandleProjectFinishedAsync(buildRequest, buildResult, pluginLogger, cancellationToken);
+                        }
+                        catch (Exception e) when (e is not ProjectCacheException)
+                        {
+                            HandlePluginException(e, nameof(ProjectCachePluginBase.HandleProjectFinishedAsync));
+                        }
+                        finally
+                        {
+                            MSBuildEventSource.Log.ProjectCacheHandleBuildResultStop(plugin.Name, buildRequest.ProjectFullPath, targetNames);
+                        }
+                    },
+                    cancellationToken);
+            }
+
+            await Task.WhenAll(tasks).ConfigureAwait(false);
+
+            if (pluginLogger.HasLoggedErrors)
+            {
+                ProjectCacheException.ThrowForErrorLoggedInsideTheProjectCache("ProjectCacheHandleBuildResultFailed", buildRequest.ProjectFullPath);
+            }
+        }
+
         public async ValueTask DisposeAsync()
         {
             if (_isDisposed)
@@ -627,6 +698,11 @@ namespace Microsoft.Build.Experimental.ProjectCache
                     if (plugin.Instance == null)
                     {
                         return;
+                    }
+
+                    if (plugin.HandlerRegistration.HasValue)
+                    {
+                        plugin.HandlerRegistration.Value.Dispose();
                     }
 
                     MSBuildEventSource.Log.ProjectCacheEndBuildStart(plugin.Name);
