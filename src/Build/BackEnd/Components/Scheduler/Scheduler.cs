@@ -1395,6 +1395,7 @@ namespace Microsoft.Build.BackEnd
             {
                 if (request.IsProxyBuildRequest() && nodeId != InProcNodeId && _schedulingData.CanScheduleRequestToNode(request, InProcNodeId))
                 {
+                    // TODO dfederm: Although we disable the in-proc node, we probably should enable it for proxied targets at least.
                     ErrorUtilities.VerifyThrow(
                         _componentHost.BuildParameters.DisableInProcNode || ForceAffinityOutOfProc,
                         "Proxy requests should only get scheduled to out of proc nodes when the inproc node is disabled");
