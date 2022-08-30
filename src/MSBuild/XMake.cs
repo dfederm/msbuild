@@ -1286,6 +1286,13 @@ namespace Microsoft.Build.CommandLine
                     parameters.OutputResultsCacheFile = outputResultsCache;
                     parameters.ReportFileAccesses = reportFileAccesses;
 
+                    // To properly report file access, we need to disable the in-proc node which won't be detoured.
+                    // TODO dfederm: Do this or add a check to ReportFileAccesses instead?
+                    if (reportFileAccesses)
+                    {
+                        parameters.DisableInProcNode = true;
+                    }
+
                     // Propagate the profiler flag into the project load settings so the evaluator
                     // can pick it up
                     if (profilerLogger != null || enableProfiler)
