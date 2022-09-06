@@ -6,4 +6,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Build\Microsoft.Build.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Build.Prediction" Version="1.1.0" />
+  </ItemGroup>
 </Project>
