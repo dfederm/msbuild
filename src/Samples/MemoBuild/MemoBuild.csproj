@@ -9,6 +9,8 @@
   <ItemGroup>
     <PackageReference Include="BuildXL.Cache.Libraries" Version="0.1.0-20220804.0" />
     <PackageReference Include="Microsoft.Build.Prediction" Version="1.1.0" />
+    <!-- Undeclared dependency of BuildXL.Cache.Libraries -->
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.13.1" />
     <!-- Unused indirect dependencies of BuildXL.Processes which causes arch mismatches -->
     <PackageReference Include="RocksDbNative" Version="6.10.2-b20220621.2" IncludeAssets="None" PrivateAssets="All" />
     <PackageReference Include="RocksDbSharp" Version="6.10.2-b20220621.2" IncludeAssets="None" PrivateAssets="All" />
