@@ -28,7 +28,7 @@ namespace MemoBuild
     public sealed class MemoCachePlugin : ProjectCachePluginBase
     {
         // Note: This is not in PluginSettings as that's configured through item metadata and thus makes it into MSBuild logs. This is a secret so that's not desirable.
-        private const string ConnectionStringEnvVar = "MEMOBUILD_CONNECTIONSTRING";
+        //private const string ConnectionStringEnvVar = "MEMOBUILD_CONNECTIONSTRING";
 
         private static readonly string PluginAssemblyDirectory = Path.GetDirectoryName(typeof(MemoCachePlugin).Assembly.Location);
 
@@ -70,11 +70,11 @@ namespace MemoBuild
                 return;
             }
 
-            string connectionString = Environment.GetEnvironmentVariable(ConnectionStringEnvVar);
-            if (string.IsNullOrEmpty(connectionString))
-            {
-                throw new ApplicationException($"Required environment variable '{ConnectionStringEnvVar}' not set");
-            }
+            //string connectionString = Environment.GetEnvironmentVariable(ConnectionStringEnvVar);
+            //if (string.IsNullOrEmpty(connectionString))
+            //{
+            //    throw new ApplicationException($"Required environment variable '{ConnectionStringEnvVar}' not set");
+            //}
 
             PluginSettings pluginSettings = PluginSettings.Create(context.PluginSettings, logger);
 
@@ -106,7 +106,7 @@ namespace MemoBuild
             _nodeContexts = nodeContexts;
             _fingerprintFactory = new FingerprintFactory(logDirectory, _contentHasher, _inputHasher, _nodeContexts);
             _fileAccessRepository = new FileAccessRepository(logDirectory);
-            _cacheClient = await CacheClient.CreateAsync(logger, _fingerprintFactory, pluginSettings.HashType, connectionString, pluginSettings.CacheUniverse);
+            _cacheClient = await CacheClient.CreateAsync(logger, _fingerprintFactory, pluginSettings.HashType, pluginSettings.CacheUniverse);
         }
 
         public override async Task EndBuildAsync(PluginLoggerBase logger, CancellationToken cancellationToken)
@@ -232,29 +232,31 @@ namespace MemoBuild
                 return;
             }
 
-            FileAccesses fileAccesses = _fileAccessRepository.FinishProject(buildRequest.ProjectInstance);
-
-            List<string> normalizedFilesRead = new();
-            foreach (string input in fileAccesses.Inputs)
-            {
-                string? normalizedFilePath = PathHelper.MakePathRelative(input, _repoRoot!);
-                if (normalizedFilePath != null)
-                {
-                    normalizedFilesRead.Add(normalizedFilePath);
-                }
-            }
-
+            Dictionary<string, string> normalizedFilesRead = new(StringComparer.OrdinalIgnoreCase);
             Dictionary<string, string> normalizedOutputPaths = new(StringComparer.OrdinalIgnoreCase);
-            foreach (string output in fileAccesses.Outputs)
+            
             {
-                string? normalizedFilePath = PathHelper.MakePathRelative(output, _repoRoot!);
-                if (normalizedFilePath != null)
+                FileAccesses fileAccesses = _fileAccessRepository.FinishProject(buildRequest.ProjectInstance);
+                foreach (string input in fileAccesses.Inputs)
                 {
-                    normalizedOutputPaths.Add(output, normalizedFilePath);
+                    string? normalizedFilePath = PathHelper.MakePathRelative(input, _repoRoot!);
+                    if (normalizedFilePath != null)
+                    {
+                        normalizedFilesRead.Add(input, normalizedFilePath);
+                    }
                 }
-                else
+
+                foreach (string output in fileAccesses.Outputs)
                 {
-                    logger.LogMessage($"Ignoring output outside of the repo root: {output}");
+                    string? normalizedFilePath = PathHelper.MakePathRelative(output, _repoRoot!);
+                    if (normalizedFilePath != null)
+                    {
+                        normalizedOutputPaths.Add(output, normalizedFilePath);
+                    }
+                    else
+                    {
+                        logger.LogMessage($"Ignoring output outside of the repo root: {output}");
+                    }
                 }
             }
 
@@ -262,17 +264,16 @@ namespace MemoBuild
             // TODO dfederm: Duplicate binplace detection
 
             ConcurrentDictionary<string, ContentHash> outputs = new(StringComparer.OrdinalIgnoreCase);
-            var outputProcessingTasks = new Task[fileAccesses.Outputs.Count];
+            var outputProcessingTasks = new Task[normalizedOutputPaths.Count];
             int i = 0;
-            foreach (string output in fileAccesses.Outputs)
+            foreach (var output in normalizedOutputPaths.Keys)
             {
                 outputProcessingTasks[i++] = Task.Run(
                     async () =>
                     {
+                        string normalizedOutputPath = normalizedOutputPaths[output];
                         ContentHash hash = await _outputHasher!.ComputeHashAsync(output, cancellationToken);
                         await _cacheClient!.AddContentAsync(logger, hash, output, cancellationToken);
-
-                        string normalizedOutputPath = normalizedOutputPaths[output];
                         outputs.TryAdd(normalizedOutputPath, hash);
                     },
                     cancellationToken);
@@ -280,7 +281,7 @@ namespace MemoBuild
 
             await Task.WhenAll(outputProcessingTasks);
 
-            PathSet? pathSet = _fingerprintFactory.GetPathSet(nodeContext, fileAccesses.Inputs);
+            PathSet? pathSet = _fingerprintFactory.GetPathSet(nodeContext, normalizedFilesRead.Keys);
             NodeBuildResult nodeBuildResult = new(outputs, creationTimeUtc: DateTime.UtcNow);
 
             // TODO dfederm: Handle CHL races

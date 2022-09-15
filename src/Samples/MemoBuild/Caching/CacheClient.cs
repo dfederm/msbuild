@@ -1,23 +1,18 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using BuildXL.Cache.ContentStore.Distributed.Blobs;
 using BuildXL.Cache.ContentStore.Hashing;
 using BuildXL.Cache.ContentStore.Interfaces.FileSystem;
 using BuildXL.Cache.ContentStore.Interfaces.Results;
-using BuildXL.Cache.ContentStore.Interfaces.Secrets;
 using BuildXL.Cache.ContentStore.Interfaces.Sessions;
-using BuildXL.Cache.ContentStore.Interfaces.Stores;
 using BuildXL.Cache.ContentStore.Interfaces.Tracing;
 using BuildXL.Cache.ContentStore.Interfaces.Utils;
 using BuildXL.Cache.ContentStore.Tracing;
-using BuildXL.Cache.MemoizationStore.Distributed.Stores;
 using BuildXL.Cache.MemoizationStore.Interfaces.Caches;
 using BuildXL.Cache.MemoizationStore.Interfaces.Results;
 using BuildXL.Cache.MemoizationStore.Interfaces.Sessions;
@@ -59,35 +54,37 @@ namespace MemoBuild.Caching
             _emptySelector = new(new ContentHash(hashType, new byte[33]), new byte[1]);
         }
 
-        public static async Task<ICacheClient> CreateAsync(
+        public static Task<ICacheClient> CreateAsync(
             PluginLoggerBase logger,
             IFingerprintFactory fingerprintFactory,
             HashType hashType,
-            string connectionString,
             string cacheUniverse)
         {
             Context context = new(new CacheLoggerAdapter(logger));
 
-            var cacheConfig = new AzureBlobStorageCacheFactory.Configuration(
-                Credentials: new AzureBlobStorageCredentials(connectionString),
-                Universe: cacheUniverse,
-                StorageInteractionTimeout: TimeSpan.FromHours(1),
-                DownloadStrategyConfiguration: new BlobDownloadStrategyConfiguration(),
-                MetadataPinElisionDuration: TimeSpan.FromDays(1));
+            // var cacheConfig = new AzureBlobStorageCacheFactory.Configuration(
+            //     Credentials: new AzureBlobStorageCredentials(connectionString),
+            //     Universe: cacheUniverse,
+            //     StorageInteractionTimeout: TimeSpan.FromHours(1),
+            //     DownloadStrategyConfiguration: new BlobDownloadStrategyConfiguration(),
+            //     MetadataPinElisionDuration: TimeSpan.FromDays(1));
 
-            ICache cache = AzureBlobStorageCacheFactory.Create(cacheConfig);
+            // ICache cache = AzureBlobStorageCacheFactory.Create(cacheConfig);
 
-            await cache.StartupAsync(context).ThrowIfFailure();
+            // await cache.StartupAsync(context).ThrowIfFailure();
 
-            CreateSessionResult<ICacheSession> createSessionResult = cache
-                .CreateSession(context, name: "Default", ImplicitPin.None)
-                .ThrowIfFailure();
+            // CreateSessionResult<ICacheSession> createSessionResult = cache
+            //     .CreateSession(context, name: "Default", ImplicitPin.None)
+            //     .ThrowIfFailure();
 
-            ICacheSession cacheSession = createSessionResult.Session!;
+            // ICacheSession cacheSession = createSessionResult.Session!;
 
-            await cacheSession.StartupAsync(context).ThrowIfFailure();
+            // await cacheSession.StartupAsync(context).ThrowIfFailure();
 
-            return new CacheClient(context, fingerprintFactory, cache, cacheSession, hashType);
+            ICache cache = new GithubActionsCache();
+            ICacheSession cacheSession = new GithubActionsCacheSession(cacheUniverse);
+            ICacheClient client = new CacheClient(context, fingerprintFactory, cache, cacheSession, hashType);
+            return Task.FromResult(client);
         }
 
         public async ValueTask DisposeAsync()
