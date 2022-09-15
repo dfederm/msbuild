@@ -15,7 +15,7 @@ namespace MemoBuild
         /// </summary>
         public string LogDirectory { get; set; } = "MemoBuildLogs";
 
-        public HashType HashType { get; set; } = HashType.Murmur;
+        public HashType HashType { get; set; } = HashType.Vso0;
 
         public string CacheUniverse { get; set; } = "default";
 
