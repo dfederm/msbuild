@@ -45,6 +45,9 @@
     <!-- Unused indirect dependencies of BuildXL.Processes which causes arch mismatches -->
     <PackageReference Include="RocksDbNative" IncludeAssets="None" PrivateAssets="All" />
     <PackageReference Include="RocksDbSharp" IncludeAssets="None" PrivateAssets="All" />
+    <!-- Hack since MemoBuild needs a newer version than BXL depends on -->
+    <PackageReference Include="Microsoft.VisualStudio.Services.InteractiveClient" />
+    <PackageReference Include="Microsoft.VisualStudio.Services.Client" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework' and '$(DotNetBuildFromSource)' != 'true'">
