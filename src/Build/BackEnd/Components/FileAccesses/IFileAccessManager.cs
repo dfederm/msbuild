@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Threading;
 using Microsoft.Build.BackEnd;
 
 // TODO dfederm: Don't directly use BXL's since this will end up being exposed to project cache plugin implementations.
@@ -19,5 +20,7 @@ namespace Microsoft.Build.FileAccesses
         FileAccessManager.HandlerRegistration RegisterHandlers(
             Action<BuildRequest, FileAccessData> fileAccessHandler,
             Action<BuildRequest, ProcessData> processHandler);
+
+        void WaitForFileAccessReportCompletion(int globalRequestId, CancellationToken cancellationToken);
     }
 }
