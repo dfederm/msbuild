@@ -2,21 +2,32 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using Microsoft.Build.BackEnd;
+using Microsoft.Build.Execution;
 using Microsoft.Build.Shared;
 
 namespace Microsoft.Build.FileAccesses
 {
     internal sealed class FileAccessManager : IFileAccessManager, IBuildComponent
     {
+        // In order to synchronize between the node communication and the file access reporting, a special file access
+        // is used to mark when the file accesses should be considered complete. Only after both this special file access is seen
+        // and the build result is reported can plugins be notified about project completion.
+        private static readonly string FileAccessCompletionPrefix = BuildParameters.StartupDirectory[0] + @":\{MSBuildFileAccessCompletion}\";
+
         private IScheduler? _scheduler;
         private IConfigCache? _configCache;
 
         private readonly ReaderWriterLockSlim _handlersLock = new();
         private List<Action<BuildRequest, FileAccessData>> _fileAccessHandlers = new();
         private List<Action<BuildRequest, ProcessData>> _processHandlers = new();
+
+        // Keyed on global request id
+        private readonly ConcurrentDictionary<int, ManualResetEventSlim> _fileAccessCompletionWaitHandles = new();
 
         public static IBuildComponent CreateComponent(BuildComponentType type)
         {
@@ -34,24 +45,40 @@ namespace Microsoft.Build.FileAccesses
         {
             _scheduler = null;
             _configCache = null;
+            _fileAccessCompletionWaitHandles.Clear();
         }
 
         public void ReportFileAccess(FileAccessData fileAccessData, int nodeId)
         {
-            BuildRequest? buildRequest = GetBuildRequest(nodeId);
-            if (buildRequest != null)
+            string fileAccessPath = fileAccessData.Path;
+
+            // Intercept and avoid forwarding the file access completion
+            if (fileAccessPath.StartsWith(FileAccessCompletionPrefix, StringComparison.Ordinal))
             {
-                _handlersLock.EnterReadLock();
-                try
+                // Parse out the global request id. Note, this must match what NotifyFileAccessCompletion does.
+                int globalRequestId = int.Parse(fileAccessPath.Substring(FileAccessCompletionPrefix.Length));
+
+                ManualResetEventSlim handle = _fileAccessCompletionWaitHandles.GetOrAdd(globalRequestId, static _ => new ManualResetEventSlim());
+                handle.Set();
+            }
+            else
+            {
+                // Forward the file access to handlers.
+                BuildRequest? buildRequest = GetBuildRequest(nodeId);
+                if (buildRequest != null)
                 {
-                    foreach (Action<BuildRequest, FileAccessData> handler in _fileAccessHandlers)
+                    _handlersLock.EnterReadLock();
+                    try
                     {
-                        handler.Invoke(buildRequest, fileAccessData);
+                        foreach (Action<BuildRequest, FileAccessData> handler in _fileAccessHandlers)
+                        {
+                            handler.Invoke(buildRequest, fileAccessData);
+                        }
                     }
-                }
-                finally
-                {
-                    _handlersLock.ExitReadLock();
+                    finally
+                    {
+                        _handlersLock.ExitReadLock();
+                    }
                 }
             }
         }
@@ -104,6 +131,25 @@ namespace Microsoft.Build.FileAccesses
             {
                 _handlersLock.ExitWriteLock();
             }
+        }
+
+        public static void NotifyFileAccessCompletion(int globalRequestId)
+        {
+            // Make a dummy file access to use as a notification that the file accesses should be completed for a project.
+            string filePath = FileAccessCompletionPrefix + globalRequestId.ToString();
+            _ = File.Exists(filePath);
+        }
+
+        public void WaitForFileAccessReportCompletion(int globalRequestId, CancellationToken cancellationToken)
+        {
+            ManualResetEventSlim handle = _fileAccessCompletionWaitHandles.GetOrAdd(globalRequestId, static _ => new ManualResetEventSlim());
+            if (!handle.IsSet)
+            {
+                handle.Wait(cancellationToken);
+            }
+
+            // Try to keep the collection clean. A request should not need to be completed twice.
+            _fileAccessCompletionWaitHandles.TryRemove(globalRequestId, out _);
         }
 
         private BuildRequest? GetBuildRequest(int nodeId)
