@@ -34,6 +34,7 @@ namespace Microsoft.Build.Experimental.ProjectCache
         private static HashSet<string> s_projectSpecificPropertyNames = new(StringComparer.OrdinalIgnoreCase) { "TargetFramework", "Configuration", "Platform", "TargetPlatform", "OutputType" };
 
         private readonly BuildManager _buildManager;
+        private readonly IBuildComponentHost _componentHost;
         private readonly ILoggingService _loggingService;
         private readonly IFileAccessManager _fileAccessManager;
         private readonly IConfigCache _configCache;
@@ -73,6 +74,7 @@ namespace Microsoft.Build.Experimental.ProjectCache
             ProjectCacheDescriptor? globalProjectCacheDescriptor)
         {
             _buildManager = buildManager;
+            _componentHost = buildManager;
             _loggingService = loggingService;
             _fileAccessManager = fileAccessManager;
             _configCache = configCache;
@@ -647,6 +649,11 @@ namespace Microsoft.Build.Experimental.ProjectCache
             if (projectCacheDescriptors.Count == 0)
             {
                 return;
+            }
+
+            if (_componentHost.BuildParameters.ReportFileAccesses)
+            {
+                _fileAccessManager.WaitForFileAccessReportCompletion(buildResult.GlobalRequestId, cancellationToken);
             }
 
             var globalProperties = new Dictionary<string, string>(requestConfiguration.GlobalProperties.Count, StringComparer.OrdinalIgnoreCase);

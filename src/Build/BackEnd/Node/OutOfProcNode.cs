@@ -16,6 +16,7 @@ using Microsoft.Build.Shared;
 using Microsoft.Build.Internal;
 using Microsoft.Build.BackEnd.Components.Caching;
 using Microsoft.Build.BackEnd.SdkResolution;
+using Microsoft.Build.FileAccesses;
 using SdkResult = Microsoft.Build.BackEnd.SdkResolution.SdkResult;
 using System.Diagnostics;
 
@@ -377,6 +378,11 @@ namespace Microsoft.Build.Execution
             if (_nodeEndpoint.LinkStatus == LinkStatus.Active)
             {
                 _nodeEndpoint.SendData(result);
+            }
+
+            if (_buildParameters.ReportFileAccesses)
+            {
+                FileAccessManager.NotifyFileAccessCompletion(result.GlobalRequestId);
             }
         }
 
