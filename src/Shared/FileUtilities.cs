@@ -16,6 +16,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Shared.FileSystem;
@@ -44,6 +45,8 @@ namespace Microsoft.Build.Shared
         /// The directory where MSBuild stores cache information used during the build.
         /// </summary>
         internal static string cacheDirectory = null;
+
+        internal static Regex cacheDirectoryRegex = null;
 
 #if CLR2COMPATIBILITY
         internal static string TempFileDirectory => Path.GetTempPath();
@@ -132,6 +135,23 @@ namespace Microsoft.Build.Shared
             }
 
             return cacheDirectory;
+        }
+
+        /// <summary>
+        /// Checks if the given path is under a cache directory.
+        /// </summary>
+        /// <remarks>
+        /// This method checks if the path is under *any* cache directory, not just the one for the current process.
+        /// </remarks>
+        internal static bool IsUnderCacheDirectory(string filePath)
+        {
+            if (cacheDirectoryRegex == null)
+            {
+                // Make sure this matches GetCacheDirectory above
+                cacheDirectoryRegex = new Regex($@"^{Regex.Escape(TempFileDirectory)}MSBuild\d+-\d+", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture);
+            }
+
+            return cacheDirectoryRegex.IsMatch(filePath);
         }
 
         /// <summary>
