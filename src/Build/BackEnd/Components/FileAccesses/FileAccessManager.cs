@@ -64,6 +64,12 @@ namespace Microsoft.Build.FileAccesses
                 ManualResetEventSlim handle = _fileAccessCompletionWaitHandles.GetOrAdd(globalRequestId, static _ => new ManualResetEventSlim());
                 handle.Set();
             }
+            else if (FileUtilities.IsUnderCacheDirectory(fileAccessPath))
+            {
+                // Ignore the cache directory as these are related to internal MSBuild functionality and not directly related to the execution of the project itself,
+                // so should not be exposed to handlers.
+                return;
+            }
             else
             {
                 // Forward the file access to handlers.
