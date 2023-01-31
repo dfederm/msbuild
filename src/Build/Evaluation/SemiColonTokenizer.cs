@@ -5,8 +5,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-using Microsoft.NET.StringTools;
-
 #nullable disable
 
 namespace Microsoft.Build.Evaluation
@@ -150,7 +148,7 @@ namespace Microsoft.Build.Evaluation
                 }
                 if (startIndex < endIndex)
                 {
-                    return Strings.WeakIntern(_expression.AsSpan(startIndex, endIndex - startIndex));
+                    return NET.StringTools.Strings.WeakIntern(_expression.AsSpan(startIndex, endIndex - startIndex));
                 }
                 return null;
             }
