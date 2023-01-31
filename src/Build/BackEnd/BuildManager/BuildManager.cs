@@ -32,7 +32,6 @@ using Microsoft.Build.Internal;
 using Microsoft.Build.Logging;
 using Microsoft.Build.Shared;
 using Microsoft.Build.Shared.Debugging;
-using Microsoft.NET.StringTools;
 using ForwardingLoggerRecord = Microsoft.Build.Logging.ForwardingLoggerRecord;
 using LoggerDescription = Microsoft.Build.Logging.LoggerDescription;
 
@@ -529,7 +528,7 @@ namespace Microsoft.Build.Execution
 
                 if (BuildParameters.DumpOpportunisticInternStats)
                 {
-                    Strings.EnableDiagnostics();
+                    NET.StringTools.Strings.EnableDiagnostics();
                 }
 
                 _executionCancellationTokenSource = new CancellationTokenSource();
@@ -1068,7 +1067,7 @@ namespace Microsoft.Build.Execution
 
                     if (BuildParameters.DumpOpportunisticInternStats)
                     {
-                        Console.WriteLine(Strings.CreateDiagnosticReport());
+                        Console.WriteLine(NET.StringTools.Strings.CreateDiagnosticReport());
                     }
                 }
             }

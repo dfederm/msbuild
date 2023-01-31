@@ -164,7 +164,7 @@ namespace Microsoft.Build.Tasks
                 // needs to pass onto the engine.
                 log?.LogMessageFromText(parameterName, MessageImportance.Low);
 
-                using SpanBasedStringBuilder stringBuilder = Strings.GetSpanBasedStringBuilder();
+                using SpanBasedStringBuilder stringBuilder = NET.StringTools.Strings.GetSpanBasedStringBuilder();
                 foreach (PropertyNameValuePair propertyNameValuePair in finalPropertiesList)
                 {
                     stringBuilder.Clear();
