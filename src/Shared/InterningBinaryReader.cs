@@ -13,8 +13,6 @@ using System.Buffers;
 
 using ErrorUtilities = Microsoft.Build.Shared.ErrorUtilities;
 
-using Microsoft.NET.StringTools;
-
 #nullable disable
 
 namespace Microsoft.Build
@@ -150,7 +148,7 @@ namespace Microsoft.Build
                     if (currPos == 0 && n == stringLength)
                     {
                         charsRead = _decoder.GetChars(rawBuffer, rawPosition, n, charBuffer, 0);
-                        return Strings.WeakIntern(charBuffer.AsSpan(0, charsRead));
+                        return NET.StringTools.Strings.WeakIntern(charBuffer.AsSpan(0, charsRead));
                     }
 #if !CLR2COMPATIBILITY
                     resultBuffer ??= ArrayPool<char>.Shared.Rent(stringLength); // Actual string length in chars may be smaller.
@@ -164,7 +162,7 @@ namespace Microsoft.Build
                 }
                 while (currPos < stringLength);
 
-                var retval = Strings.WeakIntern(resultBuffer.AsSpan(0, charsRead));
+                var retval = NET.StringTools.Strings.WeakIntern(resultBuffer.AsSpan(0, charsRead));
 
                 return retval;
             }

@@ -240,13 +240,13 @@ namespace Microsoft.Build.Evaluation
             {
                 if (_firstObject != null)
                 {
-                    _builder = Strings.GetSpanBasedStringBuilder();
+                    _builder = NET.StringTools.Strings.GetSpanBasedStringBuilder();
                     _builder.Append(FileUtilities.MaybeAdjustFilePath(_firstObject.ToString()));
                     _firstObject = null;
                 }
                 else if (!_firstSpan.IsEmpty)
                 {
-                    _builder = Strings.GetSpanBasedStringBuilder();
+                    _builder = NET.StringTools.Strings.GetSpanBasedStringBuilder();
 #if FEATURE_SPAN
                     _builder.Append(FileUtilities.MaybeAdjustFilePath(_firstSpan));
 #else
@@ -777,7 +777,7 @@ namespace Microsoft.Build.Evaluation
 
             List<string> arguments = new List<string>();
 
-            using SpanBasedStringBuilder argumentBuilder = Strings.GetSpanBasedStringBuilder();
+            using SpanBasedStringBuilder argumentBuilder = NET.StringTools.Strings.GetSpanBasedStringBuilder();
             int? argumentStartIndex = null;
 
             // We iterate over the string in the for loop below. When we find an argument, instead of adding it to the argument
@@ -913,7 +913,7 @@ namespace Microsoft.Build.Evaluation
                         }
 
                         // otherwise, run the more complex Regex to find item metadata references not contained in transforms
-                        using SpanBasedStringBuilder finalResultBuilder = Strings.GetSpanBasedStringBuilder();
+                        using SpanBasedStringBuilder finalResultBuilder = NET.StringTools.Strings.GetSpanBasedStringBuilder();
 
                         int start = 0;
                         MetadataMatchEvaluator matchEvaluator = new MetadataMatchEvaluator(metadata, options);
@@ -1406,7 +1406,7 @@ namespace Microsoft.Build.Evaluation
                     // Key and Value are converted to string and escaped
                     if (dictionary.Count > 0)
                     {
-                        using SpanBasedStringBuilder builder = Strings.GetSpanBasedStringBuilder();
+                        using SpanBasedStringBuilder builder = NET.StringTools.Strings.GetSpanBasedStringBuilder();
 
                         foreach (DictionaryEntry entry in dictionary)
                         {
@@ -1432,7 +1432,7 @@ namespace Microsoft.Build.Evaluation
                 {
                     // If the return is enumerable, then we'll convert to semi-colon delimited elements
                     // each of which must be converted, so we'll recurse for each element
-                    using SpanBasedStringBuilder builder = Strings.GetSpanBasedStringBuilder();
+                    using SpanBasedStringBuilder builder = NET.StringTools.Strings.GetSpanBasedStringBuilder();
 
                     foreach (object element in enumerable)
                     {
@@ -1845,7 +1845,7 @@ namespace Microsoft.Build.Evaluation
                     // a scalar and then create a single item. Basically we need this
                     // to be able to convert item lists with user specified separators into properties.
                     string expandedItemVector;
-                    using SpanBasedStringBuilder builder = Strings.GetSpanBasedStringBuilder();
+                    using SpanBasedStringBuilder builder = NET.StringTools.Strings.GetSpanBasedStringBuilder();
                     brokeEarlyNonEmpty = ExpandExpressionCaptureIntoStringBuilder(expander, expressionCapture, items, elementLocation, builder, options);
 
                     if (brokeEarlyNonEmpty)
@@ -2024,7 +2024,7 @@ namespace Microsoft.Build.Evaluation
                     return expression;
                 }
 
-                using SpanBasedStringBuilder builder = Strings.GetSpanBasedStringBuilder();
+                using SpanBasedStringBuilder builder = NET.StringTools.Strings.GetSpanBasedStringBuilder();
                 // As we walk through the matches, we need to copy out the original parts of the string which
                 // are not covered by the match.  This preserves original behavior which did not trim whitespace
                 // from between separators.

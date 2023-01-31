@@ -21,8 +21,6 @@ using TargetLoggingContext = Microsoft.Build.BackEnd.Logging.TargetLoggingContex
 using System.Collections.ObjectModel;
 using Microsoft.Build.Shared.FileSystem;
 
-using Microsoft.NET.StringTools;
-
 #nullable disable
 
 namespace Microsoft.Build.Execution
@@ -302,7 +300,7 @@ namespace Microsoft.Build.Execution
 
                 if (assemblyFile != null && !Path.IsPathRooted(assemblyFile))
                 {
-                    assemblyFile = Strings.WeakIntern(Path.Combine(directoryOfImportingFile, assemblyFile));
+                    assemblyFile = NET.StringTools.Strings.WeakIntern(Path.Combine(directoryOfImportingFile, assemblyFile));
                 }
 
                 if (String.Equals(taskFactory, RegisteredTaskRecord.CodeTaskFactory, StringComparison.OrdinalIgnoreCase) || String.Equals(taskFactory, RegisteredTaskRecord.XamlTaskFactory, StringComparison.OrdinalIgnoreCase))
