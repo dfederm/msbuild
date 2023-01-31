@@ -26,6 +26,9 @@
           src/Utilities/README.md
      -->
     <LatestDotNetCoreForMSBuild>net7.0</LatestDotNetCoreForMSBuild>
+
+    <!-- BuildXL.Processes depends on some packages which are x64 only (RocksDbSharp/RocksDbNative), but these are unused so just suppress the errors. -->
+    <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
   </PropertyGroup>
 
   <PropertyGroup>

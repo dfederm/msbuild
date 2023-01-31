@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Text;
 
 using Microsoft.Build.Framework;
-using Microsoft.NET.StringTools;
 
 #nullable disable
 
@@ -196,7 +195,7 @@ namespace Microsoft.Build.Shared
                 return StringBuilderCache.GetStringAndRelease(escapedStringBuilder);
             }
 
-            string escapedString = Strings.WeakIntern(escapedStringBuilder.ToString());
+            string escapedString = NET.StringTools.Strings.WeakIntern(escapedStringBuilder.ToString());
             StringBuilderCache.Release(escapedStringBuilder);
 
             lock (s_unescapedToEscapedStrings)

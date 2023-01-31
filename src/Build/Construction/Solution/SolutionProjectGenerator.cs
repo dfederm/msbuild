@@ -31,8 +31,6 @@ using FrameworkName = System.Runtime.Versioning.FrameworkName;
 #endif
 using Microsoft.Build.Execution;
 
-using Microsoft.NET.StringTools;
-
 #nullable disable
 
 namespace Microsoft.Build.Construction
@@ -1124,7 +1122,7 @@ namespace Microsoft.Build.Construction
         /// </summary>
         private static string GetPropertiesAttributeForDirectMSBuildTask(ProjectConfigurationInSolution projectConfiguration)
         {
-            string directProjectProperties = Strings.WeakIntern(String.Join(";", GetConfigurationAndPlatformPropertiesString(projectConfiguration), SolutionProperties));
+            string directProjectProperties = NET.StringTools.Strings.WeakIntern(String.Join(";", GetConfigurationAndPlatformPropertiesString(projectConfiguration), SolutionProperties));
             return directProjectProperties;
         }
 
@@ -1373,7 +1371,7 @@ namespace Microsoft.Build.Construction
         /// </summary>
         private void AddMetaprojectBuildTask(ProjectInSolution project, ProjectTargetInstance target, string targetToBuild, string outputItem)
         {
-            ProjectTaskInstance task = target.AddTask("MSBuild", Strings.WeakIntern("'%(ProjectReference.Identity)' == '" + GetMetaprojectName(project) + "'"), String.Empty);
+            ProjectTaskInstance task = target.AddTask("MSBuild", NET.StringTools.Strings.WeakIntern("'%(ProjectReference.Identity)' == '" + GetMetaprojectName(project) + "'"), String.Empty);
             task.SetParameter("Projects", "@(ProjectReference)");
 
             if (targetToBuild != null)
