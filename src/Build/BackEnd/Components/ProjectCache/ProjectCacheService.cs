@@ -232,11 +232,13 @@ namespace Microsoft.Build.Experimental.ProjectCache
                 FileAccessManager.HandlerRegistration handlerRegistration = _fileAccessManager.RegisterHandlers(
                     (buildRequest, fileAccessData) =>
                     {
+                        // TODO: Filter out projects which do not configure this plugin
                         FileAccessContext fileAccessContext = GetFileAccessContext(buildRequest);
                         pluginInstance.HandleFileAccess(fileAccessContext, fileAccessData);
                     },
                     (buildRequest, processData) =>
                     {
+                        // TODO: Filter out projects which do not configure this plugin
                         FileAccessContext fileAccessContext = GetFileAccessContext(buildRequest);
                         pluginInstance.HandleProcess(fileAccessContext, processData);
                     });
