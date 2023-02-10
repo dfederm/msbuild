@@ -30,6 +30,8 @@ namespace Microsoft.Build.BackEnd
     /// </summary>
     internal class RequestBuilder : IRequestBuilder, IRequestBuilderCallback, IBuildComponent
     {
+        private const string BuildXLAugmentedManifestHandle = "BUILDXL_AUGMENTED_MANIFEST_HANDLE";
+
         /// <summary>
         /// The dedicated scheduler object.
         /// </summary>
@@ -1289,7 +1291,10 @@ namespace Microsoft.Build.BackEnd
         {
             foreach (KeyValuePair<string, string> entry in currentEnvironment)
             {
-                if (!savedEnvironment.ContainsKey(entry.Key))
+                // TODO: The BuildXLAugmentedManifestHandle condition is necessary to ensure the
+                // BuildXLAugmentedManifestHandle environment variable is set when file accesses are reported
+                // by the VBCSCompilerLogger. Remove it once Roslyn natively reports file accesses to MSBuild.
+                if (!savedEnvironment.ContainsKey(entry.Key) && !entry.Key.Equals(BuildXLAugmentedManifestHandle))
                 {
                     Environment.SetEnvironmentVariable(entry.Key, null);
                 }
