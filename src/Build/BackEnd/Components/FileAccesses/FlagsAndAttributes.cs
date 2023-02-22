@@ -82,7 +82,7 @@ namespace Microsoft.Build.FileAccesses
         /// opened, a file handle is returned, whether or not the filter that controls the reparse point is operational.
         /// </summary>
         /// <remarks>
-        /// This flag cannot be used with the <see cref="CreationDisposition.CREATE_ALWAYS"/> flag.
+        /// This flag cannot be used with the CREATE_ALWAYS flag.
         /// If the file is not a reparse point, then this flag is ignored.
         /// For more information, see the Remarks section.
         /// </remarks>
@@ -122,9 +122,9 @@ namespace Microsoft.Build.FileAccesses
         /// other open or duplicated handles.
         /// </summary>
         /// <remarks>
-        /// If there are existing open handles to a file, the call fails unless they were all opened with the <see cref="ShareMode.FILE_SHARE_DELETE"/>
+        /// If there are existing open handles to a file, the call fails unless they were all opened with the FILE_SHARE_DELETE
         /// share mode.
-        /// Subsequent open requests for the file fail, unless the <see cref="ShareMode.FILE_SHARE_DELETE"/> share mode is specified.
+        /// Subsequent open requests for the file fail, unless the FILE_SHARE_DELETE share mode is specified.
         /// </remarks>
         FILE_FLAG_DELETE_ON_CLOSE = 0x04000000,
 
