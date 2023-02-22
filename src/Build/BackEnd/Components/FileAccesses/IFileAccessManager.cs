@@ -5,9 +5,6 @@ using System;
 using System.Threading;
 using Microsoft.Build.BackEnd;
 
-// TODO dfederm: Don't directly use BXL's since this will end up being exposed to project cache plugin implementations.
-using static BuildXL.Processes.IDetoursEventListener;
-
 namespace Microsoft.Build.FileAccesses
 {
     internal interface IFileAccessManager

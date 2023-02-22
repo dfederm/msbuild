@@ -336,14 +336,57 @@ namespace Microsoft.Build.BackEnd
             {
             }
 
-            public override void HandleFileAccess(FileAccessData fileAccessData)
-            {
-                _fileAccessManager.ReportFileAccess(fileAccessData, _nodeId);
-            }
+            public override void HandleFileAccess(FileAccessData fileAccessData) => _fileAccessManager.ReportFileAccess(
+                new FileAccesses.FileAccessData(
+                    fileAccessData.PipId,
+                    fileAccessData.PipDescription,
+                    (FileAccesses.ReportedFileOperation)fileAccessData.Operation,
+                    (FileAccesses.RequestedAccess)fileAccessData.RequestedAccess,
+                    (FileAccesses.FileAccessStatus)fileAccessData.Status,
+                    fileAccessData.ExplicitlyReported,
+                    fileAccessData.ProcessId,
+                    fileAccessData.Id,
+                    fileAccessData.CorrelationId,
+                    fileAccessData.Error,
+                    (FileAccesses.DesiredAccess)fileAccessData.DesiredAccess,
+                    (FileAccesses.ShareMode)fileAccessData.ShareMode,
+                    (FileAccesses.CreationDisposition)fileAccessData.CreationDisposition,
+                    (FileAccesses.FlagsAndAttributes)fileAccessData.FlagsAndAttributes,
+                    (FileAccesses.FlagsAndAttributes)fileAccessData.OpenedFileOrDirectoryAttributes,
+                    fileAccessData.Path,
+                    fileAccessData.ProcessArgs,
+                    fileAccessData.IsAnAugmentedFileAccess),
+                _nodeId);
 
             public override void HandleProcessData(ProcessData processData)
             {
-                _fileAccessManager.ReportProcess(processData, _nodeId);
+                BuildXL.Native.IO.IOCounters ioCounters = processData.IoCounters;
+                BuildXL.Native.IO.IOTypeCounters readCounters = ioCounters.ReadCounters;
+                BuildXL.Native.IO.IOTypeCounters writeCounters = ioCounters.WriteCounters;
+                BuildXL.Native.IO.IOTypeCounters otherCounters = ioCounters.OtherCounters;
+                _fileAccessManager.ReportProcess(
+                new FileAccesses.ProcessData(
+                    processData.PipId,
+                    processData.PipDescription,
+                    processData.ProcessName,
+                    processData.ProcessId,
+                    processData.ParentProcessId,
+                    processData.CreationDateTime,
+                    processData.ExitDateTime,
+                    processData.KernelTime,
+                    processData.UserTime,
+                    processData.ExitCode,
+                    new IOCounters(
+                        new IOTypeCounters(
+                            readCounters.OperationCount,
+                            readCounters.TransferCount),
+                        new IOTypeCounters(
+                            writeCounters.OperationCount,
+                            writeCounters.TransferCount),
+                        new IOTypeCounters(
+                            otherCounters.OperationCount,
+                            otherCounters.TransferCount))),
+                _nodeId);
             }
 
             public override void HandleProcessDetouringStatus(ProcessDetouringStatusData data)

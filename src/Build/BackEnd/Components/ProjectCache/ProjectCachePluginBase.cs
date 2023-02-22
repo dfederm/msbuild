@@ -4,9 +4,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Build.Execution;
-
-// TODO dfederm: Don't directly use BXL's since this will end up being exposed to project cache plugin implementations.
-using static BuildXL.Processes.IDetoursEventListener;
+using Microsoft.Build.FileAccesses;
 
 namespace Microsoft.Build.Experimental.ProjectCache
 {
@@ -46,20 +44,14 @@ namespace Microsoft.Build.Experimental.ProjectCache
         /// <summary>
         ///     Called for each file access from an MSBuild node or one of its children.
         /// </summary>
-#pragma warning disable CS3001 // Argument type is not CLS-compliant.
-        // TODO dfederm: Fix suppression
         public virtual void HandleFileAccess(FileAccessContext fileAccessContext, FileAccessData fileAccessData)
-#pragma warning restore CS3001 // Argument type is not CLS-compliant
         {
         }
 
         /// <summary>
         ///     Called for each new child process created by an MSBuild node or one of its children.
         /// </summary>
-#pragma warning disable CS3001 // Argument type is not CLS-compliant.
-        // TODO dfederm: Fix suppression
         public virtual void HandleProcess(FileAccessContext fileAccessContext, ProcessData processData)
-#pragma warning restore CS3001 // Argument type is not CLS-compliant
         {
         }
 

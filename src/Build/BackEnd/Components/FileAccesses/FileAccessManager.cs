@@ -10,9 +10,6 @@ using Microsoft.Build.BackEnd;
 using Microsoft.Build.Execution;
 using Microsoft.Build.Shared;
 
-// TODO dfederm: Don't directly use BXL's since this will end up being exposed to project cache plugin implementations.
-using static BuildXL.Processes.IDetoursEventListener;
-
 namespace Microsoft.Build.FileAccesses
 {
     internal sealed class FileAccessManager : IFileAccessManager, IBuildComponent
