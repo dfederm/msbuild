@@ -3,7 +3,7 @@
 
 using System;
 
-namespace Microsoft.Build.FileAccesses
+namespace Microsoft.Build.Framework
 {
     /// <summary>
     /// Level of access requested by a reported file operation.

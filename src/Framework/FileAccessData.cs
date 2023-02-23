@@ -1,7 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-namespace Microsoft.Build.FileAccesses
+namespace Microsoft.Build.Framework
 {
     /// <summary>
     /// File access data.
@@ -27,6 +27,6 @@ namespace Microsoft.Build.FileAccesses
         DesiredAccess DesiredAccess,
         FlagsAndAttributes FlagsAndAttributes,
         string Path,
-        string ProcessArgs,
+        string? ProcessArgs,
         bool IsAnAugmentedFileAccess);
 }

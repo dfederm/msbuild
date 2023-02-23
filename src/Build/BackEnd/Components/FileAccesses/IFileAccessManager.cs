@@ -4,6 +4,7 @@
 using System;
 using System.Threading;
 using Microsoft.Build.BackEnd;
+using Microsoft.Build.Framework;
 
 namespace Microsoft.Build.FileAccesses
 {

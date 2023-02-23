@@ -3,7 +3,7 @@
 
 using System;
 
-namespace Microsoft.Build.FileAccesses
+namespace Microsoft.Build.Framework
 {
     /// <summary>
     /// Flags indicating the status of a file access.

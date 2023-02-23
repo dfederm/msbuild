@@ -3,7 +3,7 @@
 
 using System;
 
-namespace Microsoft.Build.FileAccesses
+namespace Microsoft.Build.Framework
 {
     /// <summary>
     /// The file or device attributes and flags.

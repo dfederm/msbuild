@@ -5,11 +5,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Globalization;
-using System.Threading;
+using System.IO;
 using System.Reflection;
-
+using System.Threading;
 using Microsoft.Build.BackEnd;
 using Microsoft.Build.Execution;
 using Microsoft.Build.Framework;
@@ -531,9 +530,17 @@ namespace Microsoft.Build.CommandLine
                     return _taskHost._currentConfiguration.IsTaskInputLoggingEnabled;
                 }
             }
+
+            /// <inheritdoc/>
+            public override void ReportFileAccess(FileAccessData fileAccessData) => _taskHost.FileAccessData.Add(fileAccessData);
         }
 
         public EngineServices EngineServices { get; }
+
+        /// <summary>
+        /// Gets or sets the list containing file accesses reported by the most recently completed task.
+        /// </summary>
+        private List<FileAccessData> FileAccessData { get; set; } = new List<FileAccessData>();
 
         #endregion
 
@@ -937,6 +944,9 @@ namespace Microsoft.Build.CommandLine
                     {
                         _taskCompletePacket = new TaskHostTaskComplete(
                                                         taskResult,
+#if !CLR2COMPATIBILITY
+                                                        FileAccessData,
+#endif
                                                         currentEnvironment);
                     }
 
@@ -956,11 +966,20 @@ namespace Microsoft.Build.CommandLine
                     lock (_taskCompleteLock)
                     {
                         // Create a minimal taskCompletePacket to carry the exception so that the TaskHostTask does not hang while waiting
-                        _taskCompletePacket = new TaskHostTaskComplete(new OutOfProcTaskHostTaskResult(TaskCompleteType.CrashedAfterExecution, e), null);
+                        _taskCompletePacket = new TaskHostTaskComplete(
+                            new OutOfProcTaskHostTaskResult(TaskCompleteType.CrashedAfterExecution, e),
+#if !CLR2COMPATIBILITY
+                            FileAccessData,
+#endif
+                            null);
                     }
                 }
                 finally
                 {
+#if !CLR2COMPATIBILITY
+                    FileAccessData.Clear();
+#endif
+
                     // Call CleanupTask to unload any domains and other necessary cleanup in the taskWrapper
                     _taskWrapper.CleanupTask();
 

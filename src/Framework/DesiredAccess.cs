@@ -3,7 +3,7 @@
 
 using System;
 
-namespace Microsoft.Build.FileAccesses
+namespace Microsoft.Build.Framework
 {
     /// <summary>
     /// The requested access to the file or device.

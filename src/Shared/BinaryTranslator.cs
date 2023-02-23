@@ -148,6 +148,9 @@ namespace Microsoft.Build.BackEnd
                 value = _reader.ReadInt32();
             }
 
+            /// <inheritdoc/>
+            public void Translate(ref uint unsignedInteger) => unsignedInteger = _reader.ReadUInt32();
+
             /// <summary>
             /// Translates an <see langword="int"/> array.
             /// </summary>
@@ -397,6 +400,51 @@ namespace Microsoft.Build.BackEnd
                     _reader.ReadInt32());
             }
 
+            /// <inheritdoc/>
+            public void Translate(ref List<FileAccessData> value)
+            {
+                if (!TranslateNullable(value))
+                {
+                    return;
+                }
+
+                int count = default;
+                Translate(ref count);
+                value = new List<FileAccessData>(count);
+                for (int i = 0; i < count; i++)
+                {
+                    ReportedFileOperation reportedFileOperation = default;
+                    RequestedAccess requestedAccess = default;
+                    uint processId = default;
+                    uint error = default;
+                    DesiredAccess desiredAccess = default;
+                    FlagsAndAttributes flagsAndAttributes = default;
+                    string path = default;
+#nullable enable
+                    string? processArgs = default;
+#nullable disable
+                    bool isAnAugmentedFileAccess = default;
+                    TranslateEnum(ref reportedFileOperation, (int)reportedFileOperation);
+                    TranslateEnum(ref requestedAccess, (int)requestedAccess);
+                    Translate(ref processId);
+                    Translate(ref error);
+                    TranslateEnum(ref desiredAccess, (int)desiredAccess);
+                    TranslateEnum(ref flagsAndAttributes, (int)flagsAndAttributes);
+                    Translate(ref path);
+                    Translate(ref processArgs);
+                    Translate(ref isAnAugmentedFileAccess);
+                    value.Add(new FileAccessData(
+                        reportedFileOperation,
+                        requestedAccess,
+                        processId,
+                        error,
+                        desiredAccess,
+                        flagsAndAttributes,
+                        path,
+                        processArgs,
+                        isAnAugmentedFileAccess));
+                }
+            }
 #endif
 
             /// <summary>
@@ -829,6 +877,9 @@ namespace Microsoft.Build.BackEnd
                 _writer.Write(value);
             }
 
+            /// <inheritdoc/>
+            public void Translate(ref uint unsignedInteger) => _writer.Write(unsignedInteger);
+
             /// <summary>
             /// Translates an <see langword="int"/> array.
             /// </summary>
@@ -1054,6 +1105,31 @@ namespace Microsoft.Build.BackEnd
                 _writer.Write(value.TaskId);
             }
 
+            /// <inheritdoc/>
+            public void Translate(ref List<FileAccessData> value) =>
+                value.ForEach(fileAccessData =>
+                {
+                    ReportedFileOperation reportedFileOperation = fileAccessData.Operation;
+                    RequestedAccess requestedAccess = fileAccessData.RequestedAccess;
+                    uint processId = fileAccessData.ProcessId;
+                    uint error = fileAccessData.Error;
+                    DesiredAccess desiredAccess = fileAccessData.DesiredAccess;
+                    FlagsAndAttributes flagsAndAttributes = fileAccessData.FlagsAndAttributes;
+                    string path = fileAccessData.Path;
+#nullable enable
+                    string? processArgs = fileAccessData.ProcessArgs;
+#nullable disable
+                    bool isAnAugmentedFileAccess = fileAccessData.IsAnAugmentedFileAccess;
+                    TranslateEnum(ref reportedFileOperation, (int)reportedFileOperation);
+                    TranslateEnum(ref requestedAccess, (int)requestedAccess);
+                    Translate(ref processId);
+                    Translate(ref error);
+                    TranslateEnum(ref desiredAccess, (int)desiredAccess);
+                    TranslateEnum(ref flagsAndAttributes, (int)flagsAndAttributes);
+                    Translate(ref path);
+                    Translate(ref processArgs);
+                    Translate(ref isAnAugmentedFileAccess);
+                });
 #endif 
 
             /// <summary>

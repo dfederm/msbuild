@@ -337,20 +337,20 @@ namespace Microsoft.Build.BackEnd
             }
 
             public override void HandleFileAccess(FileAccessData fileAccessData) => _fileAccessManager.ReportFileAccess(
-                new FileAccesses.FileAccessData(
-                    (FileAccesses.ReportedFileOperation)fileAccessData.Operation,
-                    (FileAccesses.RequestedAccess)fileAccessData.RequestedAccess,
+                new Framework.FileAccessData(
+                    (Framework.ReportedFileOperation)fileAccessData.Operation,
+                    (Framework.RequestedAccess)fileAccessData.RequestedAccess,
                     fileAccessData.ProcessId,
                     fileAccessData.Error,
-                    (FileAccesses.DesiredAccess)fileAccessData.DesiredAccess,
-                    (FileAccesses.FlagsAndAttributes)fileAccessData.FlagsAndAttributes,
+                    (Framework.DesiredAccess)fileAccessData.DesiredAccess,
+                    (Framework.FlagsAndAttributes)fileAccessData.FlagsAndAttributes,
                     fileAccessData.Path,
                     fileAccessData.ProcessArgs,
                     fileAccessData.IsAnAugmentedFileAccess),
                 _nodeId);
 
             public override void HandleProcessData(ProcessData processData) => _fileAccessManager.ReportProcess(
-                new FileAccesses.ProcessData(
+                new Framework.ProcessData(
                     processData.ProcessName,
                     processData.ProcessId,
                     processData.ParentProcessId,

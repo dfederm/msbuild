@@ -167,13 +167,6 @@
     <Compile Include="BackEnd\Components\Communications\CurrentHost.cs" />
     <Compile Include="BackEnd\Components\Communications\ServerNodeEndpointOutOfProc.cs" />
     <Compile Include="BackEnd\Components\FileAccesses\FileAccessManager.cs" />
-    <Compile Include="BackEnd\Components\FileAccesses\DesiredAccess.cs" />
-    <Compile Include="BackEnd\Components\FileAccesses\FileAccessStatus.cs" />
-    <Compile Include="BackEnd\Components\FileAccesses\FileAccessData.cs" />
-    <Compile Include="BackEnd\Components\FileAccesses\FlagsAndAttributes.cs" />
-    <Compile Include="BackEnd\Components\FileAccesses\ProcessData.cs" />
-    <Compile Include="BackEnd\Components\FileAccesses\ReportedFileOperation.cs" />
-    <Compile Include="BackEnd\Components\FileAccesses\RequestedAccess.cs" />
     <Compile Include="BackEnd\Components\FileAccesses\IFileAccessManager.cs" />
     <Compile Include="BackEnd\Components\SdkResolution\SdkResolverException.cs" />
     <Compile Include="BackEnd\Components\SdkResolution\TranslationHelpers.cs" />
