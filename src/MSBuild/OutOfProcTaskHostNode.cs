@@ -162,6 +162,11 @@ namespace Microsoft.Build.CommandLine
         /// The task object cache.
         /// </summary>
         private RegisteredTaskObjectCacheBase _registeredTaskObjectCache;
+
+        /// <summary>
+        /// The file accesses reported by the most recently completed task.
+        /// </summary>
+        private List<FileAccessData> _fileAccessData;
 #endif
 
         /// <summary>
@@ -192,6 +197,7 @@ namespace Microsoft.Build.CommandLine
 
 #if !CLR2COMPATIBILITY
             EngineServices = new EngineServicesImpl(this);
+            _fileAccessData = new List<FileAccessData>();
 #endif
         }
 
@@ -532,15 +538,10 @@ namespace Microsoft.Build.CommandLine
             }
 
             /// <inheritdoc/>
-            public override void ReportFileAccess(FileAccessData fileAccessData) => _taskHost.FileAccessData.Add(fileAccessData);
+            public override void ReportFileAccess(FileAccessData fileAccessData) => _taskHost._fileAccessData.Add(fileAccessData);
         }
 
         public EngineServices EngineServices { get; }
-
-        /// <summary>
-        /// Gets or sets the list containing file accesses reported by the most recently completed task.
-        /// </summary>
-        private List<FileAccessData> FileAccessData { get; set; } = new List<FileAccessData>();
 
         #endregion
 
@@ -943,11 +944,11 @@ namespace Microsoft.Build.CommandLine
                     lock (_taskCompleteLock)
                     {
                         _taskCompletePacket = new TaskHostTaskComplete(
-                                                        taskResult,
+                            taskResult,
 #if !CLR2COMPATIBILITY
-                                                        FileAccessData,
+                            _fileAccessData,
 #endif
-                                                        currentEnvironment);
+                            currentEnvironment);
                     }
 
 #if FEATURE_APPDOMAIN
@@ -969,7 +970,7 @@ namespace Microsoft.Build.CommandLine
                         _taskCompletePacket = new TaskHostTaskComplete(
                             new OutOfProcTaskHostTaskResult(TaskCompleteType.CrashedAfterExecution, e),
 #if !CLR2COMPATIBILITY
-                            FileAccessData,
+                            _fileAccessData,
 #endif
                             null);
                     }
@@ -977,7 +978,7 @@ namespace Microsoft.Build.CommandLine
                 finally
                 {
 #if !CLR2COMPATIBILITY
-                    FileAccessData.Clear();
+                    _fileAccessData = new List<FileAccessData>();
 #endif
 
                     // Call CleanupTask to unload any domains and other necessary cleanup in the taskWrapper

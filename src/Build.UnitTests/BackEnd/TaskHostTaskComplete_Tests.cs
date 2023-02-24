@@ -51,8 +51,7 @@ namespace Microsoft.Build.UnitTests.BackEnd
             parameters2.Add("MyBoolValue", true);
             parameters2.Add("MyITaskItem", new TaskItem("ABC"));
             parameters2.Add("ItemArray", new ITaskItem[] { new TaskItem("DEF"), new TaskItem("GHI"), new TaskItem("JKL") });
-            _ = new
-            TaskHostTaskComplete(new OutOfProcTaskHostTaskResult(TaskCompleteType.Success, parameters2), default, null);
+            _ = new TaskHostTaskComplete(new OutOfProcTaskHostTaskResult(TaskCompleteType.Success, parameters2), default, null);
         }
 
         /// <summary>

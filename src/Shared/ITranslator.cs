@@ -235,10 +235,10 @@ namespace Microsoft.Build.BackEnd
         void Translate(ref BuildEventContext value);
 
         /// <summary>
-        /// Translates <paramref name="value"/>.
+        /// Translates <paramref name="fileAccessDataList"/>.
         /// </summary>
-        /// <param name="value">The file accesses to translate.</param>
-        void Translate(ref List<FileAccessData> value);
+        /// <param name="fileAccessDataList">The file accesses to translate.</param>
+        void Translate(ref List<FileAccessData> fileAccessDataList);
 #endif 
 
         /// <summary>

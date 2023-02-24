@@ -401,16 +401,16 @@ namespace Microsoft.Build.BackEnd
             }
 
             /// <inheritdoc/>
-            public void Translate(ref List<FileAccessData> value)
+            public void Translate(ref List<FileAccessData> fileAccessDataList)
             {
-                if (!TranslateNullable(value))
+                if (!TranslateNullable(fileAccessDataList))
                 {
                     return;
                 }
 
                 int count = default;
                 Translate(ref count);
-                value = new List<FileAccessData>(count);
+                fileAccessDataList = new List<FileAccessData>(count);
                 for (int i = 0; i < count; i++)
                 {
                     ReportedFileOperation reportedFileOperation = default;
@@ -433,7 +433,7 @@ namespace Microsoft.Build.BackEnd
                     Translate(ref path);
                     Translate(ref processArgs);
                     Translate(ref isAnAugmentedFileAccess);
-                    value.Add(new FileAccessData(
+                    fileAccessDataList.Add(new FileAccessData(
                         reportedFileOperation,
                         requestedAccess,
                         processId,
@@ -1106,8 +1106,16 @@ namespace Microsoft.Build.BackEnd
             }
 
             /// <inheritdoc/>
-            public void Translate(ref List<FileAccessData> value) =>
-                value.ForEach(fileAccessData =>
+            public void Translate(ref List<FileAccessData> fileAccessDataList)
+            {
+                if (!TranslateNullable(fileAccessDataList))
+                {
+                    return;
+                }
+
+                int count = fileAccessDataList.Count;
+                Translate(ref count);
+                fileAccessDataList.ForEach(fileAccessData =>
                 {
                     ReportedFileOperation reportedFileOperation = fileAccessData.Operation;
                     RequestedAccess requestedAccess = fileAccessData.RequestedAccess;
@@ -1130,6 +1138,7 @@ namespace Microsoft.Build.BackEnd
                     Translate(ref processArgs);
                     Translate(ref isAnAugmentedFileAccess);
                 });
+            }
 #endif 
 
             /// <summary>
