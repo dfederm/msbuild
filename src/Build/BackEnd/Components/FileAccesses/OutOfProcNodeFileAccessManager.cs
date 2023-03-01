@@ -9,12 +9,23 @@ using Microsoft.Build.Shared;
 
 namespace Microsoft.Build.FileAccesses
 {
+    /// <summary>
+    /// Reports file accesses and process data to the in-proc node.
+    /// </summary>
     internal sealed class OutOfProcNodeFileAccessManager : IFileAccessManager, IBuildComponent
     {
-        public static IBuildComponent CreateComponent(BuildComponentType type)
+        /// <summary>
+        /// The <see cref="Action"/> to report file accesses and process
+        /// data to the in-proc node.
+        /// </summary>
+        private readonly Action<INodePacket> _sendPacket;
+
+        private OutOfProcNodeFileAccessManager(Action<INodePacket> sendPacket) => _sendPacket = sendPacket;
+
+        public static IBuildComponent CreateComponent(BuildComponentType type, Action<INodePacket> sendPacket)
         {
             ErrorUtilities.VerifyThrowArgumentOutOfRange(type == BuildComponentType.FileAccessManager, nameof(type));
-            return new OutOfProcNodeFileAccessManager();
+            return new OutOfProcNodeFileAccessManager(sendPacket);
         }
 
         public void InitializeComponent(IBuildComponentHost host)
@@ -25,26 +36,28 @@ namespace Microsoft.Build.FileAccesses
         {
         }
 
-        public void ReportFileAccess(FileAccessData fileAccessData, int nodeId)
-        {
-            // TODO: Send the packet to the main node.
-        }
+        /// <summary>
+        /// Reports a file access to the in-proc node.
+        /// </summary>
+        /// <param name="fileAccessData">The file access to report to the in-proc node.</param>
+        /// <param name="nodeId">The id of the reporting out-of-proc node.</param>
+        public void ReportFileAccess(FileAccessData fileAccessData, int nodeId) => _sendPacket(new FileAccessReport(fileAccessData));
 
-        public void ReportProcess(ProcessData processData, int nodeId)
-        {
-            // TODO: Send the packet to the main node.
-        }
+        /// <summary>
+        /// Reports process data to the in-proc node.
+        /// </summary>
+        /// <param name="processData">The process data to report to the in-proc node.</param>
+        /// <param name="nodeId">The id of the reporting out-of-proc node.</param>
+        public void ReportProcess(ProcessData processData, int nodeId) => _sendPacket(new ProcessReport(processData));
 
-        public FileAccessManager.HandlerRegistration RegisterHandlers(Action<BuildRequest, FileAccessData> fileAccessHandler, Action<BuildRequest, ProcessData> processHandler)
-        {
-            // This method should not be called in OOP nodes
+        // This method should not be called in OOP nodes.
+        public FileAccessManager.HandlerRegistration RegisterHandlers(
+            Action<BuildRequest, FileAccessData> fileAccessHandler,
+            Action<BuildRequest, ProcessData> processHandler) =>
             throw new NotImplementedException();
-        }
 
-        public void WaitForFileAccessReportCompletion(int globalRequestId, CancellationToken cancellationToken)
-        {
-            // This method should not be called in OOP nodes
+        // This method should not be called in OOP nodes.
+        public void WaitForFileAccessReportCompletion(int globalRequestId, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
-        }
     }
 }
