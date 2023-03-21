@@ -21,8 +21,8 @@
     <PackageVersion Include="RocksDbSharp" Version="7.7.3-20230117.1" />
 
     <!-- Hack since MemoBuild needs a newer version than BXL depends on -->
-    <PackageVersion Include="Microsoft.VisualStudio.Services.InteractiveClient" Version="19.220.0-internal202303201" />
-    <PackageVersion Include="Microsoft.VisualStudio.Services.Client" Version="19.220.0-internal202303201" />
+    <PackageVersion Include="Microsoft.VisualStudio.Services.InteractiveClient" Version="19.220.0-internal202303211" />
+    <PackageVersion Include="Microsoft.VisualStudio.Services.Client" Version="19.220.0-internal202303211" />
 
     <PackageVersion Include="LargeAddressAware" Version="1.0.5" />
     <PackageVersion Update="LargeAddressAware" Condition="'$(LargeAddressAwareVersion)' != ''" Version="$(LargeAddressAwareVersion)" />
