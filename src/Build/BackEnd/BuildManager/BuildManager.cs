@@ -585,6 +585,7 @@ namespace Microsoft.Build.Execution
                 var fileAccessManager = ((IBuildComponentHost)this).GetComponent(BuildComponentType.FileAccessManager) as IFileAccessManager;
 #endif
 
+                loggingService.LogCommentFromText(BuildEventContext.Invalid, MessageImportance.Normal, "DFED: ProjectCacheService ctor start");
                 _projectCacheService = new ProjectCacheService(
                     this,
                     loggingService,
@@ -593,6 +594,7 @@ namespace Microsoft.Build.Execution
 #endif
                     _configCache,
                     _buildParameters.ProjectCacheDescriptor);
+                loggingService.LogCommentFromText(BuildEventContext.Invalid, MessageImportance.Normal, "DFED: ProjectCacheService ctor end");
 
                 _taskHostNodeManager = ((IBuildComponentHost)this).GetComponent(BuildComponentType.TaskHostNodeManager) as INodeManager;
                 _scheduler = ((IBuildComponentHost)this).GetComponent(BuildComponentType.Scheduler) as IScheduler;
@@ -1331,18 +1333,23 @@ namespace Microsoft.Build.Execution
                             // Only initialize once as it should be the same for all projects.
                             _hasProjectCacheServiceInitializedVsScenario = true;
 
+                            ((IBuildComponentHost)this).LoggingService.LogCommentFromText(BuildEventContext.Invalid, MessageImportance.Normal, "DFED: InitializePluginsForVsScenario start");
                             _projectCacheService.InitializePluginsForVsScenario(
                                 ProjectCacheDescriptors.Values,
                                 resolvedConfiguration,
                                 _executionCancellationTokenSource.Token);
+                            ((IBuildComponentHost)this).LoggingService.LogCommentFromText(BuildEventContext.Invalid, MessageImportance.Normal, "DFED: InitializePluginsForVsScenario end");
                         }
 
+                        ((IBuildComponentHost)this).LoggingService.LogCommentFromText(BuildEventContext.Invalid, MessageImportance.Normal, $"DFED: ExecuteSubmission.ShouldUseCache? {resolvedConfiguration}");
                         if (_projectCacheService.ShouldUseCache(resolvedConfiguration))
                         {
+                            ((IBuildComponentHost)this).LoggingService.LogCommentFromText(BuildEventContext.Invalid, MessageImportance.Normal, $"DFED: ExecuteSubmission.ShouldUseCache was true. {resolvedConfiguration}");
                             IssueCacheRequestForBuildSubmission(new CacheRequest(submission, resolvedConfiguration));
                         }
                         else
                         {
+                            ((IBuildComponentHost)this).LoggingService.LogCommentFromText(BuildEventContext.Invalid, MessageImportance.Normal, $"DFED: ShouldUseCache was false. {resolvedConfiguration}");
                             AddBuildRequestToSubmission(submission, resolvedConfiguration.ConfigurationId);
                             IssueBuildRequestForBuildSubmission(submission, resolvedConfiguration, allowMainThreadBuild);
                         }
@@ -1383,7 +1390,9 @@ namespace Microsoft.Build.Execution
             {
                 try
                 {
+                    ((IBuildComponentHost)this).LoggingService.LogCommentFromText(BuildEventContext.Invalid, MessageImportance.Normal, $"DFED: PostCacheRequest start. {cacheRequest.Configuration}");
                     _projectCacheService.PostCacheRequest(cacheRequest, _executionCancellationTokenSource.Token);
+                    ((IBuildComponentHost)this).LoggingService.LogCommentFromText(BuildEventContext.Invalid, MessageImportance.Normal, $"DFED: PostCacheRequest end. {cacheRequest.Configuration}");
                 }
                 catch (Exception e)
                 {
@@ -1948,7 +1957,9 @@ namespace Microsoft.Build.Execution
 
             if (submission.BuildRequestData.GraphBuildOptions.Build)
             {
+                ((IBuildComponentHost)this).LoggingService.LogCommentFromText(BuildEventContext.Invalid, MessageImportance.Normal, "DFED: InitializePluginsForGraph start");
                 _projectCacheService.InitializePluginsForGraph(projectGraph, _executionCancellationTokenSource.Token);
+                ((IBuildComponentHost)this).LoggingService.LogCommentFromText(BuildEventContext.Invalid, MessageImportance.Normal, "DFED: InitializePluginsForGraph stop");
 
                 var targetListTask = projectGraph.GetTargetLists(submission.BuildRequestData.TargetNames);
 
@@ -2434,16 +2445,20 @@ namespace Microsoft.Build.Execution
                 // caused the build, but not the actual request which was originally used with the build submission.
                 // ie. it may be a dependency of the "root-level" project which is associated with this submission, which
                 // isn't what we're looking for. Ensure only the actual submission's request is considered.
+                ((IBuildComponentHost)this).LoggingService.LogCommentFromText(BuildEventContext.Invalid, MessageImportance.Normal, $"DFED: HandleResult.ShouldUseCache? {configuration}");
                 if (buildSubmission.BuildRequest != null
                     && buildSubmission.BuildRequest.ConfigurationId == configuration.ConfigurationId
                     && _projectCacheService.ShouldUseCache(configuration))
                 {
+                    ((IBuildComponentHost)this).LoggingService.LogCommentFromText(BuildEventContext.Invalid, MessageImportance.Normal, $"DFED: HandleResult.ShouldUseCache was true. {configuration}");
                     BuildEventContext buildEventContext = _projectStartedEvents.TryGetValue(result.SubmissionId, out BuildEventArgs buildEventArgs)
                         ? buildEventArgs.BuildEventContext
                         : new BuildEventContext(result.SubmissionId, node, configuration.Project?.EvaluationId ?? BuildEventContext.InvalidEvaluationId, configuration.ConfigurationId, BuildEventContext.InvalidProjectContextId, BuildEventContext.InvalidTargetId, BuildEventContext.InvalidTaskId);
                     try
                     {
+                        ((IBuildComponentHost)this).LoggingService.LogCommentFromText(BuildEventContext.Invalid, MessageImportance.Normal, $"DFED: HandleBuildResultAsync start. {configuration}");
                         _projectCacheService.HandleBuildResultAsync(configuration, result, buildEventContext, _executionCancellationTokenSource.Token).Wait();
+                        ((IBuildComponentHost)this).LoggingService.LogCommentFromText(BuildEventContext.Invalid, MessageImportance.Normal, $"DFED: HandleBuildResultAsync stop. {configuration}");
                     }
                     catch (AggregateException ex) when (ex.InnerExceptions.All(inner => inner is OperationCanceledException))
                     {

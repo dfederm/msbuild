@@ -174,6 +174,7 @@ namespace Microsoft.Build.Experimental.ProjectCache
             foreach (ProjectItemInstance item in items)
             {
                 string pluginPath = FileUtilities.NormalizePath(Path.Combine(item.Project.Directory, item.EvaluatedInclude));
+                _loggingService.LogCommentFromText(BuildEventContext.Invalid, MessageImportance.Normal, $"[{projectInstance.FullPath} ({projectInstance.EvaluationId})] Plugin path: {pluginPath}");
 
                 var pluginSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 foreach (ProjectMetadataInstance metadatum in item.Metadata)
@@ -205,6 +206,7 @@ namespace Microsoft.Build.Experimental.ProjectCache
             {
                 pluginInstance = projectCacheDescriptor.PluginInstance;
                 pluginTypeName = projectCacheDescriptor.PluginInstance.GetType().Name;
+                _loggingService.LogCommentFromText(buildEventContext, MessageImportance.Normal, $"CreateAndInitializePluginAsync: PluginInstance {pluginTypeName}");
             }
             else
             {
@@ -215,14 +217,18 @@ namespace Microsoft.Build.Experimental.ProjectCache
                 try
                 {
                     MSBuildEventSource.Log.ProjectCacheCreatePluginInstanceStart(pluginAssemblyPath);
+                    _loggingService.LogCommentFromText(buildEventContext, MessageImportance.Normal, $"CreateAndInitializePluginAsync: PluginAssemblyPath {pluginAssemblyPath}");
 
                     Type pluginType = GetTypeFromAssemblyPath(pluginAssemblyPath);
                     pluginTypeName = pluginType.Name;
 
+                    _loggingService.LogCommentFromText(buildEventContext, MessageImportance.Normal, $"CreateAndInitializePluginAsync: Creating {pluginTypeName}");
                     pluginInstance = GetPluginInstanceFromType(pluginType);
+                    _loggingService.LogCommentFromText(buildEventContext, MessageImportance.Normal, $"CreateAndInitializePluginAsync: Created {pluginTypeName}");
                 }
                 catch (Exception e)
                 {
+                    _loggingService.LogCommentFromText(buildEventContext, MessageImportance.High, $"CreateAndInitializePluginAsync ctor exception! {e}");
                     return new ProjectCachePlugin(
                         pluginTypeName,
                         Instance: null,
@@ -241,11 +247,12 @@ namespace Microsoft.Build.Experimental.ProjectCache
                 ? GetGraphEntryPoints(buildRequestConfiguration)
                 : null;
 
-            _loggingService.LogComment(buildEventContext, MessageImportance.High, "LoadingProjectCachePlugin", pluginTypeName);
+            _loggingService.LogComment(buildEventContext, MessageImportance.Normal, "LoadingProjectCachePlugin", pluginTypeName);
             MSBuildEventSource.Log.ProjectCacheBeginBuildStart(pluginTypeName);
 
             try
             {
+                _loggingService.LogCommentFromText(buildEventContext, MessageImportance.Normal, $"CreateAndInitializePluginAsync.BeginBuildAsync start: {pluginTypeName}");
                 await pluginInstance.BeginBuildAsync(
                     new CacheContext(
                         projectCacheDescriptor.PluginSettings,
@@ -254,9 +261,11 @@ namespace Microsoft.Build.Experimental.ProjectCache
                         graphEntryPoints),
                     pluginLogger,
                     cancellationToken);
+                _loggingService.LogCommentFromText(buildEventContext, MessageImportance.Normal, $"CreateAndInitializePluginAsync.BeginBuildAsync stop: {pluginTypeName}");
 
                 if (pluginLogger.HasLoggedErrors)
                 {
+                    _loggingService.LogCommentFromText(buildEventContext, MessageImportance.Normal, $"CreateAndInitializePluginAsync.BeginBuildAsync logged errors: {pluginTypeName}");
                     ProjectCacheException.ThrowForErrorLoggedInsideTheProjectCache("ProjectCacheInitializationFailed");
                 }
 
@@ -280,6 +289,7 @@ namespace Microsoft.Build.Experimental.ProjectCache
             }
 #endif
 
+                _loggingService.LogCommentFromText(buildEventContext, MessageImportance.Normal, "CreateAndInitializePluginAsync done");
                 return new ProjectCachePlugin(
                     pluginTypeName,
                     pluginInstance,
@@ -290,6 +300,7 @@ namespace Microsoft.Build.Experimental.ProjectCache
             }
             catch (Exception e)
             {
+                _loggingService.LogCommentFromText(buildEventContext, MessageImportance.High, $"CreateAndInitializePluginAsync BeginBuild exception! {e}");
                 return new ProjectCachePlugin(
                     pluginTypeName,
                     Instance: null,
@@ -520,16 +531,21 @@ namespace Microsoft.Build.Experimental.ProjectCache
                 ProjectCachePlugin plugin = await GetProjectCachePluginAsync(projectCacheDescriptor, projectGraph: null, buildRequestConfiguration, cancellationToken);
                 try
                 {
+                    _loggingService.LogCommentFromText(buildEventContext, MessageImportance.High, $"GetCacheResultAsync InitializationException: {plugin.InitializationException}");
+
                     // Rethrow any initialization exception.
                     plugin.InitializationException?.Throw();
 
                     ErrorUtilities.VerifyThrow(plugin.Instance != null, "Plugin '{0}' instance is null", plugin.Name);
 
                     MSBuildEventSource.Log.ProjectCacheGetCacheResultStart(plugin.Name, buildRequest.ProjectFullPath, targetNames);
+                    _loggingService.LogCommentFromText(buildEventContext, MessageImportance.Normal, $"GetCacheResultAsync start {buildRequest.ProjectFullPath}");
                     cacheResult = await plugin.Instance!.GetCacheResultAsync(buildRequest, pluginLogger, cancellationToken);
+                    _loggingService.LogCommentFromText(buildEventContext, MessageImportance.Normal, $"GetCacheResultAsync end {buildRequest.ProjectFullPath}");
 
                     if (pluginLogger.HasLoggedErrors || cacheResult.ResultType == CacheResultType.None)
                     {
+                        _loggingService.LogCommentFromText(buildEventContext, MessageImportance.High, "GetCacheResultAsync ProjectCacheQueryFailed");
                         ProjectCacheException.ThrowForErrorLoggedInsideTheProjectCache("ProjectCacheQueryFailed", buildRequest.ProjectFullPath);
                     }
 
@@ -540,6 +556,7 @@ namespace Microsoft.Build.Experimental.ProjectCache
                 }
                 catch (Exception e) when (e is not ProjectCacheException)
                 {
+                    _loggingService.LogCommentFromText(buildEventContext, MessageImportance.High, $"GetCacheResultAsync exception: {e}");
                     HandlePluginException(e, nameof(ProjectCachePluginBase.GetCacheResultAsync));
                     return null!; // Unreachable
                 }
@@ -762,6 +779,7 @@ namespace Microsoft.Build.Experimental.ProjectCache
                         }
                         catch (Exception e) when (e is not ProjectCacheException)
                         {
+                            _loggingService.LogCommentFromText(buildEventContext, MessageImportance.High, $"HandleProjectFinishedAsync exception: {e}");
                             HandlePluginException(e, nameof(ProjectCachePluginBase.HandleProjectFinishedAsync));
                         }
                         finally
@@ -776,6 +794,7 @@ namespace Microsoft.Build.Experimental.ProjectCache
 
             if (pluginLogger.HasLoggedErrors)
             {
+                _loggingService.LogCommentFromText(buildEventContext, MessageImportance.High, "HandleProjectFinishedAsync ProjectCacheHandleBuildResultFailed");
                 ProjectCacheException.ThrowForErrorLoggedInsideTheProjectCache("ProjectCacheHandleBuildResultFailed", fileAccessContext.ProjectFullPath);
             }
         }
@@ -831,6 +850,7 @@ namespace Microsoft.Build.Experimental.ProjectCache
                     }
                     catch (Exception e) when (e is not ProjectCacheException)
                     {
+                        _loggingService.LogCommentFromText(buildEventContext, MessageImportance.High, $"EndBuildAsync exception: {e}");
                         HandlePluginException(e, nameof(ProjectCachePluginBase.EndBuildAsync));
                     }
                     finally
@@ -844,6 +864,7 @@ namespace Microsoft.Build.Experimental.ProjectCache
 
             if (pluginLogger.HasLoggedErrors)
             {
+                _loggingService.LogCommentFromText(buildEventContext, MessageImportance.High, "EndBuildAsync ProjectCacheShutdownFailed");
                 ProjectCacheException.ThrowForErrorLoggedInsideTheProjectCache("ProjectCacheShutdownFailed");
             }
         }
